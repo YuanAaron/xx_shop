@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+// origins表示允许哪些源跨域访问当前服务
+// maxAge表示非简单请求"预检"结果的有效期
+@CrossOrigin
 @RestController
 @RequestMapping("/brand")
 public class BrandController {
@@ -102,7 +105,7 @@ public class BrandController {
 
     /**
      * 根据商品分类名称查询品牌数据（自定义Mapper)
-     * @param category
+     * @param categoryName
      * @return
      */
     @GetMapping("/category/{categoryName}")
