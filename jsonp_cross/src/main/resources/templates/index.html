@@ -38,10 +38,25 @@
       function func(age) {
           alert(age)
       }
+
+      function cross_fun() {
+          $.ajax({
+              url: 'http://127.0.0.1:8082/remote/findAge?name=zhangsan',
+              type: 'get',
+              assign: false,
+              success: function (data) {
+                  console.log("跨域调用成功了...%d",data);
+              },
+              error: function () {
+                  alert('fail');
+              }
+          });
+      }
     </script>
 </head>
 <body>
     <input type="button" value="同源限制" onclick="same_origin_fun()">
     <input type="button" value="jsonp解决跨域问题" onclick="jsonp_cross_fun()">
+    <input type="button" value="cors解决跨域问题" onclick="cross_fun()">
 </body>
 </html>
