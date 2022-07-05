@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 
-@CrossOrigin
+//@CrossOrigin
 @RestController
 @RequestMapping("/file")
 public class FileController {

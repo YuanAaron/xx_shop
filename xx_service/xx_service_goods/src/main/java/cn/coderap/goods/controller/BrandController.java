@@ -14,7 +14,7 @@ import java.util.Map;
 
 // origins表示允许哪些源跨域访问当前服务
 // maxAge表示非简单请求"预检"结果的有效期
-@CrossOrigin
+//@CrossOrigin
 @RestController
 @RequestMapping("/brand")
 public class BrandController {

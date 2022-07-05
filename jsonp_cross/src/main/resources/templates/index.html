@@ -41,11 +41,11 @@
 
       function cross_fun() {
           $.ajax({
-              url: 'http://127.0.0.1:8082/remote/findAge?name=zhangsan',
+              url: 'http://127.0.0.1:8000/goods/brand/1115',
               type: 'get',
               assign: false,
               success: function (data) {
-                  console.log("跨域调用成功了...%d",data);
+                  console.log("跨域调用成功了...%o",data);
               },
               error: function () {
                   alert('fail');

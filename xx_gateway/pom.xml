@@ -10,6 +10,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>xx_gateway</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>xx_gateway_system</module>
+    </modules>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
