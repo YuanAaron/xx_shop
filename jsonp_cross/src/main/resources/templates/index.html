@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>跨域演示</title>
+    <!--引用百度cdn的jquery库-->
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+
+    <script type="text/javascript">
+      function same_origin_fun() {
+        $.ajax({
+          url: 'http://127.0.0.1:8082/remote/findAge',
+          type: 'post',
+          dataType: 'json',
+          success: function (data) {
+            console.log(data);
+          }
+        });
+      }
+    </script>
+</head>
+<body>
+    <input type="button" value="同源限制" onclick="same_origin_fun()">
+</body>
+</html>
