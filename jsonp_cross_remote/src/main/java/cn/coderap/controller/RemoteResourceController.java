@@ -10,6 +10,6 @@ public class RemoteResourceController {
     @RequestMapping("/findAge")
     public String findAge(String name) {
         System.out.println(name);
-        return "30";
+        return "func(30)";
     }
 }

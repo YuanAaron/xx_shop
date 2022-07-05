@@ -17,9 +17,31 @@
           }
         });
       }
+
+      function jsonp_cross_fun() {
+          $.ajax({
+              url: 'http://127.0.0.1:8082/remote/findAge?name=zhangsan',
+              type: 'get',
+              assign: false,
+              dataType: 'jsonp',
+              jsonp: 'callback', // 传递给请求处理程序
+              jsonpCallback: 'func', //定义回调函数的名称，在服务端返回结果后调用执行
+              success: function (data) {
+                  console.log("跨域调用成功了...%d",data);
+              },
+              error: function () {
+                  alert('fail');
+              }
+          });
+      }
+
+      function func(age) {
+          alert(age)
+      }
     </script>
 </head>
 <body>
     <input type="button" value="同源限制" onclick="same_origin_fun()">
+    <input type="button" value="jsonp解决跨域问题" onclick="jsonp_cross_fun()">
 </body>
 </html>
