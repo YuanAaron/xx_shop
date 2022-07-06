@@ -1,8 +1,13 @@
 spring:
   application:
     name: sysgateway
+  redis:
+    host: 192.168.1.128
+    port: 6379
   cloud:
     gateway:
+      # redis限流的全局配置
+#      redis-rate-limiter:
       # 情况一：如果网关微服务没有开启跨域，但是在商品微服务中开启了跨域，此时可以通过网关来访问商品微服务，因为网关微服务有路由功能。
       # 但在实际开发需要实现的是：在网关中开启跨域访问功能，关闭具体微服务中的跨域功能。因为不允许任何请求直接访问微服务，必须要经过网关。
       # 情况二：如果网关微服务开启跨域，商品微服务也开启了跨域，此时无法通过网关来访问商品微服务，即无法跨域。解决办法是去掉商品微服务的跨域。
@@ -23,6 +28,12 @@ spring:
             - Path=/goods/**
           filters:
             - StripPrefix= 1
+            # 针对于特定微服务的redis限流
+            - name: RequestRateLimiter #请求数限流 名字不能随便写
+              args:
+                key-resolver: "#{@ipKeyResolver}"  #指定限流的key
+                redis-rate-limiter.replenishRate: 100 # 允许每秒处理多少个请求（测试是可以用1）
+                redis-rate-limiter.burstCapacity: 300 # 令牌桶的容量（测试时可以用1）
         - id: system
           uri: lb://system
           predicates:
