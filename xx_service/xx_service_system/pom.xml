@@ -3,18 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>xx_shop</artifactId>
+        <artifactId>xx_service</artifactId>
         <groupId>cn.coderap</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>xx_service_api</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>xx_service_goods_api</module>
-        <module>xx_service_system_api</module>
-    </modules>
+    <artifactId>xx_service_system</artifactId>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -23,15 +18,14 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
-            <scope>provided</scope>
+            <groupId>cn.coderap</groupId>
+            <artifactId>xx_common_db</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>javax.persistence</groupId>
-            <artifactId>persistence-api</artifactId>
-            <version>1.0</version>
-            <scope>compile</scope>
+            <groupId>cn.coderap</groupId>
+            <artifactId>xx_service_system_api</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
