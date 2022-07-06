@@ -5,12 +5,15 @@ import cn.coderap.entity.PageResult;
 import cn.coderap.entity.Result;
 import cn.coderap.system.pojo.Admin;
 import cn.coderap.system.service.AdminService;
+import cn.coderap.system.util.JwtUtil;
 import com.github.pagehelper.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 //@CrossOrigin
 @RestController
@@ -110,7 +113,11 @@ public class AdminController {
         boolean isSuccess = adminService.login(admin);
         //登录成功
         if(isSuccess){
-            return new Result(true,StatusCode.OK,"登录成功");
+            Map<String,String> resultMap = new HashMap<>();
+            resultMap.put("username",admin.getLoginName());
+            String token = JwtUtil.createJWT(UUID.randomUUID().toString(), admin.getLoginName(),null);
+            resultMap.put("token",token);
+            return new Result(true,StatusCode.OK,"登录成功",resultMap);
         }else{
             return new Result(false,StatusCode.LOGINERROR,"登录失败");
         }
