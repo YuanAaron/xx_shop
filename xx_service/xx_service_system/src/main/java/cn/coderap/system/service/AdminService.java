@@ -20,4 +20,6 @@ public interface AdminService {
     List<Admin> findList(Map searchMap);
 
     Page<Admin> findPage(Map searchMap, int page, int size);
+
+    boolean login(Admin admin);
 }

@@ -3,6 +3,7 @@ package cn.coderap.system.service.impl;
 import cn.coderap.system.dao.AdminMapper;
 import cn.coderap.system.pojo.Admin;
 import cn.coderap.system.service.AdminService;
+import cn.coderap.util.BCrypt;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void add(Admin admin) {
+        String hashpw = BCrypt.hashpw(admin.getPassword(), BCrypt.gensalt());
+        admin.setPassword(hashpw);
         adminMapper.insertSelective(admin);
     }
 
@@ -55,6 +58,20 @@ public class AdminServiceImpl implements AdminService {
         PageHelper.startPage(page,size);
         Example example = createExample(searchMap);
         return (Page<Admin>)adminMapper.selectByExample(example);
+    }
+
+    @Override
+    public boolean login(Admin admin) {
+        Admin query = new Admin();
+        query.setLoginName(admin.getLoginName());
+        query.setStatus("1");
+        // 根据用户名和状态查询出Admin
+        Admin res = adminMapper.selectOne(query);
+        if (res == null) {
+            return false;
+        } else {
+            return BCrypt.checkpw(admin.getPassword(),res.getPassword());
+        }
     }
 
     private Example createExample(Map<String, Object> searchMap){
