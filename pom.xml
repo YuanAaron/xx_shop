@@ -11,6 +11,7 @@
         <module>xx_eureka</module>
         <module>xx_common</module>
         <module>xx_common_db</module>
+        <module>xx_oauth</module>
     </modules>
 
     <parent>
