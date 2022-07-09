@@ -34,3 +34,10 @@ encrypt:
     secret: cn.coderap # 私钥
     alias: coderap # 别名
     password: cn.coderap # 密钥库的密码
+
+auth:
+  ttl: 3600 # token存储到redis的过期时间
+  clientId: coderap
+  clientSecret: coderap
+  cookieDomain: .coderap.cn
+  cookieMaxAge: -1

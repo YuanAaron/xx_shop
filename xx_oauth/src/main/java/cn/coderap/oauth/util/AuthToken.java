@@ -1,12 +1,16 @@
 package cn.coderap.oauth.util;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
 /**
  * 用户令牌封装
  **/
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class AuthToken implements Serializable{
 
