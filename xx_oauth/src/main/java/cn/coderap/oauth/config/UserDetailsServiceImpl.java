@@ -31,6 +31,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        //从数据库加载客户端信息-起
         //取出身份，如果身份为空说明没有认证
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -47,6 +48,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 return new User(username,clientSecret, AuthorityUtils.commaSeparatedStringToAuthorityList(""));
             }
         }
+        //从数据库加载客户端信息-止
 
         //如果用户没有输入用户名返回null
         if (StringUtils.isEmpty(username)) {
