@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>xx_gateway_system</module>
+        <module>xx_gateway_front</module>
     </modules>
 
     <properties>

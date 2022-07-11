@@ -1,6 +1,5 @@
 package cn.coderap.gateway.filter;
 
-import cn.coderap.gateway.util.JwtUtil;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -18,7 +17,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class AuthorizeFilter implements GlobalFilter, Ordered {
 
-    private  static final String AUTHORIZE_TOKEN = "token";
+    private  static final String AUTHORIZE_TOKEN = "Authorization";
     /**
      * 请求时会将令牌放入请求头中
      */
@@ -27,7 +26,7 @@ public class AuthorizeFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         ServerHttpResponse response = exchange.getResponse();
         //1.如果用户访问的登录则放行
-        if(request.getURI().getPath().contains("/admin/login")){
+        if(request.getURI().getPath().contains("/user/login")){
             return chain.filter(exchange);
         }
         //获取请求头中令牌
@@ -37,16 +36,7 @@ public class AuthorizeFilter implements GlobalFilter, Ordered {
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return response.setComplete();
         }
-        // 3.如果请求头中有令牌但解析令牌失败
-        try {
-            JwtUtil.parseJWT(token);
-        } catch (Exception e) {
-            e.printStackTrace();
-            // 解析jwt令牌出错, 说明令牌过期或者伪造等不合法情况出现
-            response.setStatusCode(HttpStatus.UNAUTHORIZED);
-            return response.setComplete();
-        }
-        // 4.合法访问
+        // 3.合法访问
         return chain.filter(exchange);
     }
 

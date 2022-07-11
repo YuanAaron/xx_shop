@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: frontgateway
+  redis:
+    host: 192.168.1.128
+    port: 6379
+  cloud:
+    gateway:
+      #开启网关的跨域功能
+      globalcors:
+        cors-configurations:
+          '[/**]': # 匹配所有请求
+            allowedOrigins: "*" #跨域处理 允许所有的域
+            allowedMethods: # 支持的方法
+              - GET
+              - POST
+              - PUT
+              - DELETE
+      routes:
+        - id: goods
+          uri: lb://goods
+          predicates:
+            - Path=/goods/**
+          filters:
+            - StripPrefix= 1
+            # 针对于特定微服务的redis限流
+            - name: RequestRateLimiter #请求数限流 名字不能随便写
+              args:
+                key-resolver: "#{@ipKeyResolver}"  #指定限流的key
+                redis-rate-limiter.replenishRate: 100 # 允许每秒处理多少个请求（测试是可以用1）
+                redis-rate-limiter.burstCapacity: 300 # 令牌桶的容量（测试时可以用1）
+        - id: user
+          uri: lb://user
+          predicates:
+            - Path=/user/**
+          filters:
+            - StripPrefix= 1
+server:
+  port: 7000
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:8888/eureka
+  instance:
+    prefer-ip-address: true
