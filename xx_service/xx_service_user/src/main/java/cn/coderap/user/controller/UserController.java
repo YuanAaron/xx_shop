@@ -7,6 +7,7 @@ import cn.coderap.user.pojo.User;
 import cn.coderap.user.service.UserService;
 import com.github.pagehelper.Page;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ public class UserController {
      * 查询全部数据
      * @return
      */
+    @PreAuthorize("hasAuthority('admin')")
     @GetMapping
     public Result findAll(){
         List<User> userList = userService.findAll();

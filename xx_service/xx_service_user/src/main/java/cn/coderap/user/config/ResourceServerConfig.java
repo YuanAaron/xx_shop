@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableResourceServer //开启资源服务器配置(令牌校验)
-@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true) //开启spring方法级安全,激活方法上的PreAuthorize注解
+@EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true) //开启spring方法级权限控制,激活方法上的PreAuthorize注解
 public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
 
     //公钥目录
