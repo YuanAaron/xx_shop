@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/user")
 public interface UserFeign {
 
-    @GetMapping({"/load/{username}"})
+    @GetMapping("/load/{username}")
     public Result findById(@PathVariable String username);
 
     /**

@@ -61,7 +61,8 @@ public class AuthServiceImpl implements AuthService {
                     restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<MultiValueMap<String, String>>(formData, header), Map.class);
             body = mapResponseEntity.getBody();
         }catch (Exception e){
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return null;
         }
         //这些字段可以从 postman进行密码模式的的返回值中 获取
         if(body == null || body.get("access_token") == null || body.get("refresh_token") == null || body.get("jti") == null) {

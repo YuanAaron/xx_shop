@@ -66,8 +66,8 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
     public void configure(HttpSecurity http) throws Exception {
         //所有请求必须认证通过
         http.authorizeRequests()
-                //下边的路径放行（用户注册）
-                .antMatchers("/user/add").permitAll()
+                //下边的路径放行（用户注册和从数据库加载用户数据）
+                .antMatchers("/user/add","/user/load/*").permitAll()
                 .anyRequest().
                 authenticated(); //其他地址需要认证授权
     }

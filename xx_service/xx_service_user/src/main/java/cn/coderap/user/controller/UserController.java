@@ -35,7 +35,7 @@ public class UserController {
      * @param username
      * @return
      */
-    @GetMapping("/{username}")
+    @GetMapping({"/{username}","/load/{username}"})
     public Result findById(@PathVariable String username){
         User user = userService.findById(username);
         return new Result(true,StatusCode.OK,"查询成功",user);

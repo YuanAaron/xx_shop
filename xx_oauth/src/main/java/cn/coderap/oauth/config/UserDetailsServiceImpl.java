@@ -1,6 +1,9 @@
 package cn.coderap.oauth.config;
 
+import cn.coderap.entity.Result;
 import cn.coderap.oauth.util.UserJwt;
+import cn.coderap.user.feign.UserFeign;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -24,6 +27,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Autowired
     private ClientDetailsService clientDetailsService;
+    @Autowired
+    private UserFeign userFeign;
 
     /****
      * 自定义授权认证
@@ -55,9 +60,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             return null;
         }
 
+        //从数据库加载用户数据（登录账号、密码等）
+        Result result = userFeign.findById(username);
+        if (result == null || result.getData() == null) {
+            return null;
+        }
+        //Result中的User对象在http传输过程中转换成了LinkedHashMap类型
+        ObjectMapper objectMapper = new ObjectMapper();
+        cn.coderap.user.pojo.User user = objectMapper.convertValue(result.getData(), cn.coderap.user.pojo.User.class);
         //根据用户名查询用户信息
-        String pwd = new BCryptPasswordEncoder().encode("123456");
-        //创建权限字符串
+        String pwd = user.getPassword();
+        //创建权限字符串(权限相关的写死了，有待优化）
         String permissions = "user,vip,admin";
         //创建用户JWT对象
         UserJwt userDetails = new UserJwt(username, pwd, AuthorityUtils.commaSeparatedStringToAuthorityList(permissions));
