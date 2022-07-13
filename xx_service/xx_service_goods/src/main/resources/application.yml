@@ -40,4 +40,7 @@ hystrix:
             # 熔断器超时时间，默认：1000/毫秒
             timeoutInMilliseconds: 20000
 
+# 分布式id（雪花算法）
+datacenterId: 1
+workerId: 1
 
