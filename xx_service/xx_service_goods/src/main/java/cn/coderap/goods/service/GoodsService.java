@@ -8,4 +8,16 @@ public interface GoodsService {
     Goods findById(String id);
 
     void update(Goods goods);
+
+    void audit(String id);
+
+    void put(String id);
+
+    void pull(String id);
+
+    void delete(String id);
+
+    void restore(String id);
+
+    void realDelete(String id);
 }

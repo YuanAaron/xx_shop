@@ -39,6 +39,10 @@ public class GoodsServiceImpl implements GoodsService {
         // 保存spu
         Spu spu = goods.getSpu();
         spu.setId(String.valueOf(idWorker.nextId()));
+        //设置商品状态信息，数据库已有默认值，不设置感觉也行
+        goods.getSpu().setStatus("0"); // 未审核
+        goods.getSpu().setIsMarketable("0"); // 未上架
+        goods.getSpu().setIsDelete("0"); // 未删除
         spuMapper.insertSelective(spu);
         // 保存sku集合
         insertSkuList(goods);
@@ -73,6 +77,62 @@ public class GoodsServiceImpl implements GoodsService {
         skuMapper.deleteByExample(example);
         //保存sku列表
         insertSkuList(goods);
+    }
+
+    @Override
+    public void audit(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        spu.setStatus("1"); //已审核
+        spuMapper.updateByPrimaryKeySelective(spu);
+    }
+
+    @Override
+    public void put(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        //只有已审核的商品才允许上架
+        if(!spu.getStatus().equals("1")){
+            throw new RuntimeException("未审核的商品不允许上架");
+        }
+        spu.setIsMarketable("1");//上架
+        spuMapper.updateByPrimaryKeySelective(spu);
+    }
+
+    @Override
+    public void pull(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        spu.setIsMarketable("0");//下架
+        spuMapper.updateByPrimaryKeySelective(spu);
+    }
+
+    @Override
+    public void delete(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        if(!spu.getIsMarketable().equals("0")){
+            throw new RuntimeException("必须先下架再删除!");
+        }
+        spu.setIsDelete("1"); // 删除
+        spu.setStatus("0"); // 未审核
+        spuMapper.updateByPrimaryKeySelective(spu);
+    }
+
+    @Override
+    public void restore(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        if(!spu.getIsDelete().equals("1")){
+            throw  new RuntimeException("该商品未删除!");
+        }
+        spu.setIsDelete("0"); // 未删除
+        spu.setStatus("0"); // 未审核
+        spuMapper.updateByPrimaryKeySelective(spu);
+    }
+
+    @Override
+    public void realDelete(String id) {
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        if(!spu.getIsDelete().equals("1")){
+            throw new RuntimeException("该商品未执行逻辑删除");
+        }
+        spuMapper.deleteByPrimaryKey(id);
     }
 
     private void insertSkuList(Goods goods) {

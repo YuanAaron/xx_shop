@@ -40,7 +40,7 @@ public class GoodsController {
     }
 
     /***
-     * 修改数据
+     * 修改商品
      * @param goods
      * @param id
      * @return
@@ -50,5 +50,66 @@ public class GoodsController {
         goods.getSpu().setId(id);
         goodsService.update(goods);
         return new Result(true,StatusCode.OK,"修改成功");
+    }
+
+    /**
+     * 商品审核（商品->审核->上架（此时审核状态必须为1)->下架->删除）
+     * @param id
+     * @return
+     */
+    @PutMapping("/audit/{id}")
+    public Result audit(@PathVariable String id){
+        goodsService.audit(id);
+        return new Result(true,StatusCode.OK,"审核成功");
+    }
+
+    /**
+     * 商品上架
+     */
+    @PutMapping("/put/{id}")
+    public Result put(@PathVariable String id){
+        goodsService.put(id);
+        return new Result(true,StatusCode.OK,"上架成功");
+    }
+    /**
+     * 商品下架
+     */
+    @PutMapping("/pull/{id}")
+    public Result pull(@PathVariable String id){
+        goodsService.pull(id);
+        return new Result(true,StatusCode.OK,"下架成功");
+    }
+
+    /***
+     * 根据ID逻辑删除商品
+     * @param id
+     * @return
+     */
+    @DeleteMapping(value = "/{id}" )
+    public Result delete(@PathVariable String id){
+        goodsService.delete(id);
+        return new Result(true,StatusCode.OK,"删除成功");
+    }
+
+    /**
+     * 还原
+     * @param id
+     * @return
+     */
+    @PutMapping("/restore/{id}")
+    public Result restore(@PathVariable String id){
+        goodsService.restore(id);
+        return new Result(true,StatusCode.OK,"还原成功");
+    }
+
+    /***
+     * 根据ID物理删除商品
+     * @param id
+     * @return
+     */
+    @DeleteMapping(value = "/realDelete/{id}" )
+    public Result realDelete(@PathVariable String id){
+        goodsService.realDelete(id);
+        return new Result(true,StatusCode.OK,"删除成功");
     }
 }
