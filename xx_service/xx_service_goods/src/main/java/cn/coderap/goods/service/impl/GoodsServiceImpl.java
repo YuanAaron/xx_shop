@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tk.mybatis.mapper.entity.Example;
 
 import java.util.Date;
 import java.util.List;
@@ -40,6 +41,37 @@ public class GoodsServiceImpl implements GoodsService {
         spu.setId(String.valueOf(idWorker.nextId()));
         spuMapper.insertSelective(spu);
         // 保存sku集合
+        insertSkuList(goods);
+    }
+
+    @Override
+    public Goods findById(String id) {
+        // 查询spu对象
+        Spu spu = spuMapper.selectByPrimaryKey(id);
+        // 查询sku列表
+        Example example = new Example(Sku.class);
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("spuId", id);
+        List<Sku> skuList = skuMapper.selectByExample(example);
+
+        Goods goods = new Goods();
+        goods.setSpu(spu);
+        goods.setSkuList(skuList);
+        return goods;
+    }
+
+    @Transactional
+    @Override
+    public void update(Goods goods) {
+        Spu spu = goods.getSpu();
+        spuMapper.updateByPrimaryKeySelective(spu);
+
+        //删除原来的sku列表
+        Example example = new Example(Sku.class);
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("spuId", spu.getId());
+        skuMapper.deleteByExample(example);
+        //保存sku列表
         insertSkuList(goods);
     }
 
