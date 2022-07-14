@@ -1,9 +1,6 @@
 package cn.coderap.goods.service.impl;
 
-import cn.coderap.goods.dao.BrandMapper;
-import cn.coderap.goods.dao.CategoryMapper;
-import cn.coderap.goods.dao.SkuMapper;
-import cn.coderap.goods.dao.SpuMapper;
+import cn.coderap.goods.dao.*;
 import cn.coderap.goods.pojo.*;
 import cn.coderap.goods.service.GoodsService;
 import cn.coderap.util.IdWorker;
@@ -28,6 +25,8 @@ public class GoodsServiceImpl implements GoodsService {
     private BrandMapper brandMapper;
     @Autowired
     private CategoryMapper categoryMapper;
+    @Autowired
+    private CategoryBrandMapper categoryBrandMapper;
 
     /**
      * 一个商品包含一个spu和多个sku
@@ -51,6 +50,18 @@ public class GoodsServiceImpl implements GoodsService {
         Brand brand = brandMapper.selectByPrimaryKey(spu.getBrandId());
         //获得分类对象
         Category category = categoryMapper.selectByPrimaryKey(spu.getCategory3Id());
+
+        /**
+         * 添加分类和品牌之间的关联
+         * tb_category_brand
+         */
+        CategoryBrand categoryBrand = new CategoryBrand();
+        categoryBrand.setBrandId(spu.getBrandId());
+        categoryBrand.setCategoryId(spu.getCategory3Id());
+        int count = categoryBrandMapper.selectCount(categoryBrand);
+        if (count == 0) {
+            categoryBrandMapper.insert(categoryBrand);
+        }
 
         //获得SkuList
         List<Sku> skuList = goods.getSkuList();
