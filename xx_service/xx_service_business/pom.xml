@@ -3,25 +3,30 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>xx_shop</artifactId>
+        <artifactId>xx_service</artifactId>
         <groupId>cn.coderap</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>xx_service</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>xx_service_goods</module>
-        <module>xx_service_file</module>
-        <module>xx_service_system</module>
-        <module>xx_service_user</module>
-        <module>xx_service_business</module>
-    </modules>
+    <artifactId>xx_service_business</artifactId>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.coderap</groupId>
+            <artifactId>xx_common_db</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.coderap</groupId>
+            <artifactId>xx_service_business_api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 
 </project>

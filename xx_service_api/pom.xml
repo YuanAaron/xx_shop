@@ -15,6 +15,7 @@
         <module>xx_service_goods_api</module>
         <module>xx_service_system_api</module>
         <module>xx_service_user_api</module>
+        <module>xx_service_business_api</module>
     </modules>
 
     <properties>
