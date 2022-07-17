@@ -12,6 +12,7 @@
         <module>xx_common</module>
         <module>xx_common_db</module>
         <module>xx_oauth</module>
+        <module>xx_canal</module>
     </modules>
 
     <parent>
