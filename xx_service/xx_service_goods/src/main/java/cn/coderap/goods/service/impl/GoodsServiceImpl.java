@@ -109,6 +109,9 @@ public class GoodsServiceImpl implements GoodsService {
         Spu spu = spuMapper.selectByPrimaryKey(id);
         spu.setIsMarketable("0");//下架
         spuMapper.updateByPrimaryKeySelective(spu);
+
+        // 发送下架的商品id（spuId）到mq
+        rabbitMessagingTemplate.convertAndSend("goods_down_exchange", "", id);
     }
 
     @Override

@@ -9,4 +9,6 @@ public interface SearchService {
     void importAll();
 
     void importDataToES(String spuId);
+
+    void deleteDataFromES(String spuId);
 }

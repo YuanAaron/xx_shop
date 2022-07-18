@@ -60,4 +60,17 @@ public class SearchServiceImpl implements SearchService {
         }
         searchMapper.saveAll(skuInfoList);
     }
+
+    @Override
+    public void deleteDataFromES(String spuId) {
+        Map paramMap = new HashMap();
+        paramMap.put("spuId", spuId);
+        //通过spuId查询sku列表
+        Result result = skuFeign.findList(paramMap);
+        List<SkuInfo> skuInfoList = JSON.parseArray(JSON.toJSONString(result.getData()), SkuInfo.class);
+        for (SkuInfo skuInfo : skuInfoList) {
+            skuInfo.setSpecMap(JSON.parseObject(skuInfo.getSpec(), Map.class));
+        }
+        searchMapper.deleteAll(skuInfoList);
+    }
 }
