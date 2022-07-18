@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>xx_service_goods</artifactId>
+    <artifactId>xx_service_search</artifactId>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
@@ -19,16 +19,23 @@
     <dependencies>
         <dependency>
             <groupId>cn.coderap</groupId>
-            <artifactId>xx_common_db</artifactId>
+            <artifactId>xx_common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-        <!--引入实体、对外暴露接口-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.coderap</groupId>
+            <artifactId>xx_service_search_api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>cn.coderap</groupId>
             <artifactId>xx_service_goods_api</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>

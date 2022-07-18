@@ -5,6 +5,8 @@ import cn.coderap.goods.pojo.*;
 import cn.coderap.goods.service.GoodsService;
 import cn.coderap.util.IdWorker;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.amqp.rabbit.core.RabbitMessagingTemplate;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ public class GoodsServiceImpl implements GoodsService {
     private CategoryMapper categoryMapper;
     @Autowired
     private CategoryBrandMapper categoryBrandMapper;
+    @Autowired
+    private RabbitMessagingTemplate rabbitMessagingTemplate;
 
     /**
      * 一个商品包含一个spu和多个sku
@@ -95,6 +99,9 @@ public class GoodsServiceImpl implements GoodsService {
         }
         spu.setIsMarketable("1");//上架
         spuMapper.updateByPrimaryKeySelective(spu);
+
+        // 发送上架的商品id（spuId）到mq
+        rabbitMessagingTemplate.convertAndSend("goods_up_exchange","", id);
     }
 
     @Override
