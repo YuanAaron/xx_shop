@@ -4,3 +4,7 @@ canal:
       example:
         host: 192.168.1.128
         port: 11111
+
+spring:
+  rabbitmq:
+    host: 192.168.1.128
