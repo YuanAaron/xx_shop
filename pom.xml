@@ -13,6 +13,8 @@
         <module>xx_common_db</module>
         <module>xx_oauth</module>
         <module>xx_canal</module>
+        <module>xx_service/xx_service_page</module>
+        <module>xx_service_api/xx_service_page_api</module>
     </modules>
 
     <parent>
