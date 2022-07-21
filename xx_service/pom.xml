@@ -18,6 +18,7 @@
         <module>xx_service_user</module>
         <module>xx_service_business</module>
         <module>xx_service_search</module>
+        <module>xx_service_page</module>
     </modules>
 
     <properties>
