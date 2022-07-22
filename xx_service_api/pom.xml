@@ -18,6 +18,7 @@
         <module>xx_service_business_api</module>
         <module>xx_service_search_api</module>
         <module>xx_service_page_api</module>
+        <module>xx_service_cart_api</module>
     </modules>
 
     <properties>
