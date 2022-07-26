@@ -3,6 +3,7 @@ package cn.coderap.user.service.impl;
 import cn.coderap.user.dao.AddressMapper;
 import cn.coderap.user.pojo.Address;
 import cn.coderap.user.service.AddressService;
+import cn.coderap.util.TokenDecode;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,16 @@ public class AddressServiceImpl implements AddressService {
         PageHelper.startPage(page,size);
         Example example = createExample(searchMap);
         return (Page<Address>)addressMapper.selectByExample(example);
+    }
+
+    @Override
+    public List<Address> list() {
+        //获取到令牌中的username
+        String username = TokenDecode.getUserInfo().get("username");
+
+        Address address = new Address();
+        address.setUsername(username);
+        return addressMapper.select(address);
     }
 
     private Example createExample(Map<String, Object> searchMap){

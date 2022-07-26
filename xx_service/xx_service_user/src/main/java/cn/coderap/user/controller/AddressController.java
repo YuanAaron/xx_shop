@@ -98,4 +98,10 @@ public class AddressController {
         PageResult pageResult=new PageResult(pageList.getTotal(),pageList.getResult());
         return new Result(true,StatusCode.OK,"查询成功",pageResult);
     }
+
+    @GetMapping("/queryByUserName")
+    public Result<List<Address>> findAddressByUserName(){
+        List<Address> addressList = addressService.list();
+        return new Result<>(true,StatusCode.OK,"查询成功",addressList);
+    }
 }

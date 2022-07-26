@@ -20,4 +20,6 @@ public interface AddressService {
     List<Address> findList(Map searchMap);
 
     Page<Address> findPage(Map searchMap, int page, int size);
+
+    List<Address> list();
 }
