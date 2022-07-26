@@ -35,6 +35,12 @@ spring:
             - Path=/user/**
           filters:
             - StripPrefix= 1
+        - id: cart
+          uri: lb://cart
+          predicates:
+            - Path=/cart/**
+          filters:
+            - StripPrefix= 1
 server:
   port: 7000
 eureka:
