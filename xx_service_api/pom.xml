@@ -19,6 +19,7 @@
         <module>xx_service_search_api</module>
         <module>xx_service_page_api</module>
         <module>xx_service_cart_api</module>
+        <module>xx_service_order_api</module>
     </modules>
 
     <properties>
