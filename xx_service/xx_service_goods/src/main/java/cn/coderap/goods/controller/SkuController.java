@@ -99,4 +99,26 @@ public class SkuController {
         return new Result(true,StatusCode.OK,"查询成功",pageResult);
     }
 
+    /**
+     * 库存变更&销量变更
+     * @param username
+     * @return
+     */
+    @PostMapping("/changeCount")
+    public Result changeInventoryAndSaleNumber(@RequestParam(value = "username") String username){
+        skuService.changeInventoryAndSaleNumber(username);
+        return new Result(true,StatusCode.OK,"变更成功");
+    }
+
+    /**
+     * 恢复库存&恢复销量
+     * @param skuId
+     * @param num
+     */
+    @PostMapping("/resumeStockNum")
+    public Result resumeStockNum(@RequestParam String skuId, @RequestParam Integer num){
+        skuService.resumeStock(skuId,num);
+        return new Result(true,StatusCode.OK,"操作成功");
+    }
+
 }

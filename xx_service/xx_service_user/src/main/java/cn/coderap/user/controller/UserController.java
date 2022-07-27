@@ -5,6 +5,7 @@ import cn.coderap.entity.PageResult;
 import cn.coderap.entity.Result;
 import cn.coderap.user.pojo.User;
 import cn.coderap.user.service.UserService;
+import cn.coderap.util.TokenDecode;
 import com.github.pagehelper.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -99,6 +100,19 @@ public class UserController {
         Page<User> pageList = userService.findPage(searchMap, page, size);
         PageResult pageResult=new PageResult(pageList.getTotal(),pageList.getResult());
         return new Result(true,StatusCode.OK,"查询成功",pageResult);
+    }
+
+    /**
+     * 增加积分
+     * @param points
+     */
+    @PostMapping("/points/add")
+    public Result addPoints(@RequestParam(value = "points") Integer points){
+        //通过解析令牌获取用户名
+        String username = TokenDecode.getUserInfo().get("username");
+        //添加加分
+        userService.addUserPoints(username,points);
+        return new Result(true,StatusCode.OK,"操作成功");
     }
 
 }

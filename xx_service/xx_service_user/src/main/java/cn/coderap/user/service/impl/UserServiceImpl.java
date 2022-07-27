@@ -56,6 +56,12 @@ public class UserServiceImpl implements UserService {
         return (Page<User>)userMapper.selectByExample(example);
     }
 
+    @Override
+    public void addUserPoints(String username, Integer points) {
+        int rows = userMapper.addPoints(username,points);
+        System.out.println(rows);
+    }
+
     private Example createExample(Map<String, Object> searchMap){
         Example example=new Example(User.class);
         Example.Criteria criteria = example.createCriteria();

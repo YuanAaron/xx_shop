@@ -5,6 +5,7 @@ import cn.coderap.entity.PageResult;
 import cn.coderap.entity.Result;
 import cn.coderap.order.pojo.Order;
 import cn.coderap.order.service.OrderService;
+import cn.coderap.util.TokenDecode;
 import com.github.pagehelper.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -40,12 +41,14 @@ public class OrderController {
     }
 
     /***
-     * 新增数据
+     * 下单
      * @param order
      * @return
      */
     @PostMapping
     public Result add(@RequestBody Order order){
+        String username = TokenDecode.getUserInfo().get("username");
+        order.setUsername(username);
         orderService.add(order);
         return new Result(true,StatusCode.OK,"添加成功");
     }

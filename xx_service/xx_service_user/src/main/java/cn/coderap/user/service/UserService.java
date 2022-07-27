@@ -20,4 +20,6 @@ public interface UserService {
     List<User> findList(Map searchMap);
 
     Page<User> findPage(Map searchMap, int page, int size);
+
+    void addUserPoints(String username, Integer points);
 }

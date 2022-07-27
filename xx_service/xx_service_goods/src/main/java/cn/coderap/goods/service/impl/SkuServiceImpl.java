@@ -1,11 +1,15 @@
 package cn.coderap.goods.service.impl;
 
+import cn.coderap.cart.pojo.OrderItem;
 import cn.coderap.goods.dao.SkuMapper;
 import cn.coderap.goods.pojo.Sku;
 import cn.coderap.goods.service.SkuService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import tk.mybatis.mapper.entity.Example;
@@ -17,6 +21,10 @@ import java.util.Map;
 public class SkuServiceImpl implements SkuService {
     @Autowired
     private SkuMapper skuMapper;
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    private static final String CART = "CART_";
 
     @Override
     public List<Sku> findAll() {
@@ -54,6 +62,31 @@ public class SkuServiceImpl implements SkuService {
         PageHelper.startPage(page,size);
         Example example = createExample(searchMap);
         return (Page<Sku>)skuMapper.selectByExample(example);
+    }
+
+    @Override
+    public void changeInventoryAndSaleNumber(String username) {
+        RedisSerializer stringRedisSerializer = new StringRedisSerializer();
+        redisTemplate.setKeySerializer(stringRedisSerializer);
+        //查询购物车列表
+        List<OrderItem> orderItemList = redisTemplate.boundHashOps(CART + username).values();
+        for (OrderItem orderItem : orderItemList) {
+            if (orderItem.isChecked()) {
+                //执行库存&销量变更(一定要考虑到前提：购买商品的数量小于等于库存的数量)
+                int count = skuMapper.changeCount(orderItem);
+                if (count <= 0) {
+                    throw new RuntimeException("库存不足");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void resumeStock(String skuId, Integer num) {
+        Sku sku = skuMapper.selectByPrimaryKey(skuId);
+        sku.setNum(sku.getNum() + num);
+        sku.setSaleNum(sku.getSaleNum() - num);
+        skuMapper.updateByPrimaryKey(sku);
     }
 
     private Example createExample(Map<String, Object> searchMap){

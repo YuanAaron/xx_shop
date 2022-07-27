@@ -20,4 +20,8 @@ public interface SkuService {
     List<Sku> findList(Map searchMap);
 
     Page<Sku> findPage(Map searchMap, int page, int size);
+
+    void changeInventoryAndSaleNumber(String username);
+
+    void resumeStock(String skuId, Integer num);
 }
