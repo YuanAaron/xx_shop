@@ -21,9 +21,10 @@ public class MultiThreadCreateOrderTask {
     @Autowired
     private SeckillGoodsMapper seckillGoodsMapper;
 
-    private static final String SECKILL_KEY = "SeckillGoods_";
-    private static final String SECKILL_ORDER_KEY = "SeckillOrderQueue";
-    private static final String SECKILL_ORDER_STATUS_KEY = "SeckillOrderStatusQueue";
+    private static final String SECKILL_GOODS = "SeckillGoods_";
+    private static final String SECKILL_ORDER = "SeckillOrder_";
+    private static final String SECKILL_ORDER_QUEUE = "SeckillOrderQueue";
+    private static final String SECKILL_ORDER_STATUS_QUEUE = "SeckillOrderStatusQueue";
 
     /**
      * 以多线程的方式执行该方法
@@ -38,7 +39,7 @@ public class MultiThreadCreateOrderTask {
         }
 
         //获取Redis中排队的用户信息
-        SeckillStatus seckillStatus = (SeckillStatus) redisTemplate.boundListOps(SECKILL_ORDER_KEY).rightPop();
+        SeckillStatus seckillStatus = (SeckillStatus) redisTemplate.boundListOps(SECKILL_ORDER_QUEUE).rightPop();
         if (seckillStatus == null) {
             return;
         }
@@ -48,7 +49,7 @@ public class MultiThreadCreateOrderTask {
         Long id = seckillStatus.getGoodsId();
 
         //1.判断有没有库存
-        SeckillGoods seckillGoods = (SeckillGoods) redisTemplate.boundHashOps(SECKILL_KEY + time).get(id);
+        SeckillGoods seckillGoods = (SeckillGoods) redisTemplate.boundHashOps(SECKILL_GOODS + time).get(id);
         if (seckillGoods == null || seckillGoods.getStockCount() <= 0) {
             throw new RuntimeException("卖完了!");
         }
@@ -63,13 +64,13 @@ public class MultiThreadCreateOrderTask {
         seckillOrder.setStatus("0"); //未支付
         System.out.println("秒杀订单ID：" + seckillOrder.getId());
         //保存订单到Redis,每人只能秒杀一次
-        redisTemplate.boundHashOps("SeckillOrder_").put(username, seckillOrder);
+        redisTemplate.boundHashOps(SECKILL_ORDER).put(username, seckillOrder);
 
         //修改用户下单的状态
         seckillStatus.setStatus(2); //待付款
         seckillStatus.setMoney(Float.valueOf(seckillGoods.getCostPrice().toString()));
         seckillStatus.setOrderId(seckillOrder.getId());
-        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_KEY).put(username, seckillStatus);
+        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).put(username, seckillStatus);
 
         //3.库存递减
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
@@ -78,11 +79,11 @@ public class MultiThreadCreateOrderTask {
             //3.1.1 同步库存到mysql中
             seckillGoodsMapper.updateByPrimaryKeySelective(seckillGoods);
             //3.1.2 移除redis中该商品的数据
-            redisTemplate.boundHashOps(SECKILL_KEY + time).delete(id);
+            redisTemplate.boundHashOps(SECKILL_GOODS + time).delete(id);
         } else {
             //3.2当前购买的商品不是最后一件
             //3.2.1将库存数据更新到redis中
-            redisTemplate.boundHashOps(SECKILL_KEY + time).put(id, seckillGoods);
+            redisTemplate.boundHashOps(SECKILL_GOODS + time).put(id, seckillGoods);
         }
         System.out.println("MultiThreadCreateOrderTask....createOrder...end...下单成功");
     }

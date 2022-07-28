@@ -21,7 +21,7 @@ public class SeckillGoodsLoadTask {
     @Autowired
     private SeckillGoodsMapper seckillGoodsMapper;
 
-    private static final String SECKILL_KEY = "SeckillGoods_";
+    private static final String SECKILL_GOODS = "SeckillGoods_";
 
     /**
      * 定时将符合秒杀条件的商品存储到Redis库
@@ -43,7 +43,7 @@ public class SeckillGoodsLoadTask {
             criteria.andLessThan("endTime", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(DateUtil.addDateHour(dateMenu, 2)));
 
             //设置namespace ：2021042920  -->  yyyyMMddHH
-            String namespace = SECKILL_KEY + DateUtil.data2str(dateMenu, "yyyyMMddHH");
+            String namespace = SECKILL_GOODS + DateUtil.data2str(dateMenu, "yyyyMMddHH");
             //排除掉已经存储到Redis的SeckillGoods,已经存储到Redis中的排除出查询结果
             Set keys = redisTemplate.boundHashOps(namespace).keys();
             if (keys != null && keys.size() > 0) {

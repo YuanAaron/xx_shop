@@ -17,8 +17,8 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
     @Autowired
     private RedisTemplate redisTemplate;
 
-    private static final String SECKILL_ORDER_KEY = "SeckillOrderQueue";
-    private static final String SECKILL_ORDER_STATUS_KEY = "SeckillOrderStatusQueue";
+    private static final String SECKILL_ORDER_QUEUE = "SeckillOrderQueue";
+    private static final String SECKILL_ORDER_STATUS_QUEUE = "SeckillOrderStatusQueue";
 
     /**
      * 基础秒杀下单存在的问题：
@@ -39,14 +39,14 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
         //创建排队对象（存储用户和订单信息）
         SeckillStatus seckillStatus = new SeckillStatus(username, new Date(), 1, id, time);
         //存入redis list中进行排队
-        redisTemplate.boundListOps(SECKILL_ORDER_KEY).leftPush(seckillStatus);
-        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_KEY).put(username, seckillStatus.getStatus());
+        redisTemplate.boundListOps(SECKILL_ORDER_QUEUE).leftPush(seckillStatus);
+        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).put(username, seckillStatus.getStatus());
         task.createOrder();
         System.out.println("我不会等你，证明是异步的");
     }
 
     @Override
     public SeckillStatus queryStatus(String username) {
-        return (SeckillStatus) redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_KEY).get(username);
+        return (SeckillStatus) redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).get(username);
     }
 }

@@ -13,15 +13,15 @@ public class SeckillGoodsServiceImpl implements SeckillGoodsService {
     @Autowired
     private RedisTemplate redisTemplate;
 
-    private static final String SECKILL_KEY = "SeckillGoods_";
+    private static final String SECKILL_GOODS = "SeckillGoods_";
 
     @Override
     public List<SeckillGoods> list(String time) {
-        return redisTemplate.boundHashOps(SECKILL_KEY + time).values();
+        return redisTemplate.boundHashOps(SECKILL_GOODS + time).values();
     }
 
     @Override
     public SeckillGoods select(String time, Long id) {
-        return (SeckillGoods)redisTemplate.boundHashOps(SECKILL_KEY + time).get(id);
+        return (SeckillGoods)redisTemplate.boundHashOps(SECKILL_GOODS + time).get(id);
     }
 }
