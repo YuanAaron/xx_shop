@@ -2,6 +2,7 @@ package cn.coderap.seckill.controller;
 
 import cn.coderap.constant.StatusCode;
 import cn.coderap.entity.Result;
+import cn.coderap.entity.SeckillStatus;
 import cn.coderap.seckill.pojo.SeckillGoods;
 import cn.coderap.seckill.service.SeckillOrderService;
 import cn.coderap.util.TokenDecode;
@@ -27,6 +28,20 @@ public class SeckillOrderController {
         String username = TokenDecode.getUserInfo().get("username");
         orderService.add(time, id, username);
         return new Result(true, StatusCode.OK, "success");
+    }
+
+    /**
+     * 用于查询用户下单的状态
+     * @return
+     */
+    @GetMapping("/query")
+    public Result<SeckillStatus> queryStatus() {
+        String username = TokenDecode.getUserInfo().get("username");
+        SeckillStatus seckillStatus = orderService.queryStatus(username);
+        if (seckillStatus != null) {
+            return new Result<>(true, StatusCode.OK, "抢单成功", seckillStatus);
+        }
+        return new Result<>(false, StatusCode.ERROR, "抢单失败");
     }
 
 }

@@ -23,6 +23,7 @@ public class MultiThreadCreateOrderTask {
 
     private static final String SECKILL_KEY = "SeckillGoods_";
     private static final String SECKILL_ORDER_KEY = "SeckillOrderQueue";
+    private static final String SECKILL_ORDER_STATUS_KEY = "SeckillOrderStatusQueue";
 
     /**
      * 以多线程的方式执行该方法
@@ -63,6 +64,12 @@ public class MultiThreadCreateOrderTask {
         System.out.println("秒杀订单ID：" + seckillOrder.getId());
         //保存订单到Redis,每人只能秒杀一次
         redisTemplate.boundHashOps("SeckillOrder_").put(username, seckillOrder);
+
+        //修改用户下单的状态
+        seckillStatus.setStatus(2); //待付款
+        seckillStatus.setMoney(Float.valueOf(seckillGoods.getCostPrice().toString()));
+        seckillStatus.setOrderId(seckillOrder.getId());
+        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_KEY).put(username, seckillStatus);
 
         //3.库存递减
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
