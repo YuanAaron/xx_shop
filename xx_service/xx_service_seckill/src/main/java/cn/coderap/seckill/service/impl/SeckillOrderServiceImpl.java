@@ -1,15 +1,23 @@
 package cn.coderap.seckill.service.impl;
 
+import cn.coderap.entity.SeckillStatus;
 import cn.coderap.seckill.service.SeckillOrderService;
 import cn.coderap.seckill.task.MultiThreadCreateOrderTask;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
 
 @Service
 public class SeckillOrderServiceImpl implements SeckillOrderService {
 
     @Autowired
     private MultiThreadCreateOrderTask task;
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    private static final String SECKILL_ORDER_KEY = "SeckillOrderQueue";
 
     /**
      * 基础秒杀下单存在的问题：
@@ -27,6 +35,10 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
      */
     @Override
     public void add(String time, Long id, String username) {
+        //创建排队对象（存储用户和订单信息）
+        SeckillStatus seckillStatus = new SeckillStatus(username, new Date(), 1, id, time);
+        //存入redis list中进行排队
+        redisTemplate.boundListOps(SECKILL_ORDER_KEY).leftPush(seckillStatus);
         task.createOrder();
         System.out.println("我不会等你，证明是异步的");
     }

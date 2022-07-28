@@ -1,5 +1,6 @@
 package cn.coderap.seckill.task;
 
+import cn.coderap.entity.SeckillStatus;
 import cn.coderap.seckill.dao.SeckillGoodsMapper;
 import cn.coderap.seckill.pojo.SeckillGoods;
 import cn.coderap.seckill.pojo.SeckillOrder;
@@ -21,6 +22,7 @@ public class MultiThreadCreateOrderTask {
     private SeckillGoodsMapper seckillGoodsMapper;
 
     private static final String SECKILL_KEY = "SeckillGoods_";
+    private static final String SECKILL_ORDER_KEY = "SeckillOrderQueue";
 
     /**
      * 以多线程的方式执行该方法
@@ -34,10 +36,15 @@ public class MultiThreadCreateOrderTask {
             throw new RuntimeException(e);
         }
 
+        //获取Redis中排队的用户信息
+        SeckillStatus seckillStatus = (SeckillStatus) redisTemplate.boundListOps(SECKILL_ORDER_KEY).rightPop();
+        if (seckillStatus == null) {
+            return;
+        }
         //TODO 这三个不能作为参数传过来？？？不是很理解！
-        String username = "zhangsan";
-        String time = "2022072820";
-        Long id = 10026L;
+        String username = seckillStatus.getUsername();
+        String time = seckillStatus.getTime();
+        Long id = seckillStatus.getGoodsId();
 
         //1.判断有没有库存
         SeckillGoods seckillGoods = (SeckillGoods) redisTemplate.boundHashOps(SECKILL_KEY + time).get(id);
