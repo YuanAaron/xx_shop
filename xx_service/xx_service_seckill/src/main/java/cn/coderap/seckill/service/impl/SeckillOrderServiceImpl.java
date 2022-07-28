@@ -19,6 +19,7 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
 
     private static final String SECKILL_ORDER_QUEUE = "SeckillOrderQueue";
     private static final String SECKILL_ORDER_STATUS_QUEUE = "SeckillOrderStatusQueue";
+    private static final String SECKILL_ORDER_COUNT = "SeckillOrderCount";
 
     /**
      * 基础秒杀下单存在的问题：
@@ -36,6 +37,13 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
      */
     @Override
     public void add(String time, Long id, String username) {
+        //重复下单问题（一个用户最多只允许有一个排队信息存在，一个用户最多只允许有一个未支付的订单信息）
+        Long userOrderCount = redisTemplate.boundHashOps(SECKILL_ORDER_COUNT).increment(username, 1); // 每次进来都会自增1
+        if (userOrderCount > 1) {
+            throw new RuntimeException("重复抢单！！！");
+        }
+
+        //使用redis list解决多线程下单产生的顺序问题
         //创建排队对象（存储用户和订单信息）
         SeckillStatus seckillStatus = new SeckillStatus(username, new Date(), 1, id, time);
         //存入redis list中进行排队
