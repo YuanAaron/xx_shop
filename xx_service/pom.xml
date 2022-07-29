@@ -22,6 +22,7 @@
         <module>xx_service_cart</module>
         <module>xx_service_order</module>
         <module>xx_service_seckill</module>
+        <module>xx_service_pay</module>
     </modules>
 
     <properties>
