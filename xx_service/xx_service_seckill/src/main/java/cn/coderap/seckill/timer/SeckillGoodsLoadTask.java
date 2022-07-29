@@ -22,6 +22,7 @@ public class SeckillGoodsLoadTask {
     private SeckillGoodsMapper seckillGoodsMapper;
 
     private static final String SECKILL_GOODS = "SeckillGoods_";
+    private static final String SECKILL_GOODS_QUEUE = "SeckillGoodsQueue_";
 
     /**
      * 定时将符合秒杀条件的商品存储到Redis库
@@ -56,9 +57,9 @@ public class SeckillGoodsLoadTask {
             //4.将数据存储到redis中
             for (SeckillGoods seckillGood : seckillGoods) {
                 redisTemplate.boundHashOps(namespace).put(seckillGood.getId(), seckillGood);
-                //为每个商品维护一个队列List,该List的长度就是每个商品的库存数
-                //List中存什么不重要,重要的是长度和库存数一致,将每个元素都存储该秒杀商品的id
-//                redisTemplate.boundListOps("SeckillGoodsQueue_" + seckillGood.getId()).leftPushAll(getGoodsAllIds(seckillGood.getId(),seckillGood.getStockCount()));
+
+                //解决超卖问题：为每个商品维护一个库存List（List中存什么不重要,重要的是该List的长度要和每个商品的库存数一致,这里List的每个元素存储该秒杀商品的id）
+                redisTemplate.boundListOps(SECKILL_GOODS_QUEUE + seckillGood.getId()).leftPushAll(getGoodsAllIds(seckillGood.getId(),seckillGood.getStockCount()));
             }
         }
     }
@@ -69,7 +70,7 @@ public class SeckillGoodsLoadTask {
      * @param num
      * @return
      */
-    public Long[] getGoodsAllIds(Long id, Integer num) {
+    private Long[] getGoodsAllIds(Long id, Integer num) {
         Long[] ids = new Long[num];
         for (int i = 0; i < ids.length; i++) {
             ids[i] = id;

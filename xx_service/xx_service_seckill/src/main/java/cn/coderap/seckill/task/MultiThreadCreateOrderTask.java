@@ -25,6 +25,8 @@ public class MultiThreadCreateOrderTask {
     private static final String SECKILL_ORDER = "SeckillOrder_";
     private static final String SECKILL_ORDER_QUEUE = "SeckillOrderQueue";
     private static final String SECKILL_ORDER_STATUS_QUEUE = "SeckillOrderStatusQueue";
+    private static final String SECKILL_GOODS_QUEUE = "SeckillGoodsQueue_";
+    private static final String SECKILL_ORDER_COUNT = "SeckillOrderCount";
 
     /**
      * 以多线程的方式执行该方法
@@ -32,6 +34,7 @@ public class MultiThreadCreateOrderTask {
     @Async
     public void createOrder() {
         System.out.println("MultiThreadCreateOrderTask....createOrder...start");
+        // 生产环境下去掉延迟
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
@@ -49,6 +52,16 @@ public class MultiThreadCreateOrderTask {
         Long id = seckillStatus.getGoodsId();
 
         //1.判断有没有库存
+        //1.1先从该商品的库存队列中获取商品id
+        Object rightPop = redisTemplate.boundListOps(SECKILL_GOODS_QUEUE + id).rightPop();
+        //如果从没有商品的库存队列获取到商品id，表示没有库存
+        if (rightPop == null) {
+            //清理掉排队信息，允许再次抢单
+            redisTemplate.boundHashOps(SECKILL_ORDER_COUNT).delete(username);
+            redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).delete(username);
+            return;
+        }
+        //1.2只是这一步查库存会导致超卖问题，因此需要1.1的判断
         SeckillGoods seckillGoods = (SeckillGoods) redisTemplate.boundHashOps(SECKILL_GOODS + time).get(id);
         if (seckillGoods == null || seckillGoods.getStockCount() <= 0) {
             throw new RuntimeException("卖完了!");
