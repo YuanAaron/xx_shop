@@ -24,8 +24,8 @@ public class SeckillOrderController {
      * @return
      */
     @GetMapping("/add")
-    public Result<SeckillGoods> add(String time, Long id, String username) {
-//        String username = TokenDecode.getUserInfo().get("username");
+    public Result<SeckillGoods> add(String time, Long id) {
+        String username = TokenDecode.getUserInfo().get("username");
         orderService.add(time, id, username);
         return new Result(true, StatusCode.OK, "success");
     }

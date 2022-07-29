@@ -88,17 +88,12 @@ public class MultiThreadCreateOrderTask {
         //3.库存递减
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
 
-        // 当前库存的判断以及同步不精准，因为上面的库存递减操作是在内存中进行的，此时还没有同步到redis，复现代码如下
-        try {
-            Thread.sleep(10000);
-            System.out.println(Thread.currentThread().getName() + "下单之后的库存量" + seckillGoods.getStockCount());
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (seckillGoods.getStockCount() <= 0) {
+        // 解决库存判断以及同步不精准的问题：库存校验不要使用内存中的数据，而是使用库存队列元素的个数（真实的库存数据）
+        Long size = redisTemplate.boundListOps(SECKILL_GOODS_QUEUE + id).size();
+        if (size <= 0) {
             //3.1当前购买的商品就是最后一件，那么移除redis中该商品记录
             //3.1.1 同步库存到mysql中
+            seckillGoods.setStockCount(size.intValue());
             seckillGoodsMapper.updateByPrimaryKeySelective(seckillGoods);
             //3.1.2 移除redis中该商品的数据
             redisTemplate.boundHashOps(SECKILL_GOODS + time).delete(id);
