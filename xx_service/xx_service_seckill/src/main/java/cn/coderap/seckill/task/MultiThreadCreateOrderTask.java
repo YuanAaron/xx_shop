@@ -87,6 +87,15 @@ public class MultiThreadCreateOrderTask {
 
         //3.库存递减
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
+
+        // 当前库存的判断以及同步不精准，因为上面的库存递减操作是在内存中进行的，此时还没有同步到redis，复现代码如下
+        try {
+            Thread.sleep(10000);
+            System.out.println(Thread.currentThread().getName() + "下单之后的库存量" + seckillGoods.getStockCount());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
         if (seckillGoods.getStockCount() <= 0) {
             //3.1当前购买的商品就是最后一件，那么移除redis中该商品记录
             //3.1.1 同步库存到mysql中
