@@ -5,14 +5,19 @@ import cn.coderap.entity.Result;
 import cn.coderap.order.pojo.Order;
 import cn.coderap.pay.feign.OrderFeign;
 import cn.coderap.pay.util.MatrixToImageWriter;
+import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.domain.AlipayTradePrecreateModel;
+import com.alipay.api.domain.AlipayTradeQueryModel;
 import com.alipay.api.request.AlipayTradePrecreateRequest;
+import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradePrecreateResponse;
+import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -75,5 +80,43 @@ public class AlipayController {
             MatrixToImageWriter.writeToFile(bt, "jpg", file);
         }
         return new Result(true, StatusCode.OK, "交易预创建成功");
+    }
+
+    /**
+     * 手动查询用户的支付结果
+     *
+     * 统一收单线下交易查询
+     * @return
+     */
+    @GetMapping("/queryStatus")
+    public String query(@RequestParam String out_trade_no) throws AlipayApiException {
+        AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
+        AlipayTradeQueryModel model = new AlipayTradeQueryModel();
+        model.setOutTradeNo(out_trade_no);
+        request.setBizModel(model);
+
+        AlipayTradeQueryResponse response = alipayClient.execute(request);
+        /**
+         * 判断订单状态
+         * 响应正常->交易状态
+         * 响应异常->错误原因
+         * 其他问题->返回响应body
+         */
+        String result = response.getBody();
+        if (response.isSuccess() && "10000".equals(response.getCode())) {
+            result = response.getTradeStatus();
+        } else {
+            String subCode = response.getSubCode();
+            if ("ACQ.SYSTEM_ERROR".equals(subCode)) {
+                result = "系统错误,重新发起请求";
+            }
+            if ("ACQ.INVALID_PARAMETER".equals(subCode)) {
+                result = "参数无效,检查请求参数，修改后重新发起请求";
+            }
+            if ("ACQ.TRADE_NOT_EXIST".equals(subCode)) {
+                result = "查询的交易不存在,检查传入的交易号是否正确，修改后重新发起请求";
+            }
+        }
+        return result;
     }
 }
