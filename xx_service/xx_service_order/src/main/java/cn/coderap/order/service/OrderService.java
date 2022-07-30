@@ -21,4 +21,6 @@ public interface OrderService {
     List<Order> findList(Map<String, Object> searchMap);
 
     Page<Order> findPage(Map<String, Object> searchMap, int page, int size);
+
+    void changeOrderStatusAndOrderLog(Map<String, String> map);
 }

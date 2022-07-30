@@ -3,12 +3,14 @@ package cn.coderap.pay.controller;
 import cn.coderap.constant.StatusCode;
 import cn.coderap.entity.Result;
 import cn.coderap.order.pojo.Order;
+import cn.coderap.pay.config.AlipayConfig;
 import cn.coderap.pay.feign.OrderFeign;
 import cn.coderap.pay.util.MatrixToImageWriter;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.domain.AlipayTradePrecreateModel;
 import com.alipay.api.domain.AlipayTradeQueryModel;
+import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePrecreateRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradePrecreateResponse;
@@ -16,13 +18,15 @@ import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/alipay")
@@ -31,6 +35,12 @@ public class AlipayController {
     private AlipayClient alipayClient;
     @Autowired
     private OrderFeign orderFeign;
+    @Autowired
+    private AlipayConfig alipayConfig;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    private static final String ORDER_EXCHANGE = "order_exchange";
 
     /**
      * 请求二维码（为了保证接口的幂等性，前端调用该接口前先进性支付状态的校验，
@@ -53,6 +63,7 @@ public class AlipayController {
         //2.创建AlipayTradePrecreateRequest对象
         AlipayTradePrecreateRequest request = new AlipayTradePrecreateRequest();
         //设置notifyUrl
+        request.setNotifyUrl("http://f42svd.natappfree.cc/alipay/notify");//设置notifyUrl
 
         //3.创建预处理业务模型
         AlipayTradePrecreateModel model = new AlipayTradePrecreateModel();
@@ -118,5 +129,69 @@ public class AlipayController {
             }
         }
         return result;
+    }
+
+    /**
+     * 支付宝服务器异步通知（只有支付成功后才会回调）
+     * @param request
+     * @return
+     * @throws Exception
+     */
+    @PostMapping("/notify")
+    public String notifyUrl(HttpServletRequest request) throws Exception {
+        //一、获取并转换支付宝请求中参数
+        Map<String, String> params = parseAlipayResultToMap(request);
+        //二、验证签名
+        boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayConfig.getAlipay_public_key(),
+                alipayConfig.getCharset(), alipayConfig.getSigntype()); //调用SDK验证签名
+        //签名验证成功 & 用户已经成功支付
+//        if (signVerified && "TRADE_SUCCESS".equals(params.get("trade_status"))) {
+        if (signVerified) {
+            //三、将数据发送MQ
+            Map<String, String> message = prepareMQData(params);
+            rabbitTemplate.convertAndSend(ORDER_EXCHANGE, "", message);
+            return "success";
+        } else {
+            return "fail";
+        }
+    }
+
+    /**
+     * 将支付宝回调请求中的参数转换为Map
+     * @param request
+     * @return
+     */
+    private Map<String, String> parseAlipayResultToMap(HttpServletRequest request) {
+        //获取支付宝POST过来反馈信息
+        Map<String, String> params = new HashMap<String, String>();
+        //支付宝请求中的参数
+        Map<String, String[]> requestParams = request.getParameterMap();
+        for (Iterator<String> iter = requestParams.keySet().iterator(); iter.hasNext(); ) {
+            String name = (String) iter.next();
+            String[] values = (String[]) requestParams.get(name);
+            String valueStr = "";
+            for (int i = 0; i < values.length; i++) {
+                valueStr = (i == values.length - 1) ? valueStr + values[i]
+                        : valueStr + values[i] + ",";
+            }
+            params.put(name, valueStr);
+        }
+        return params;
+    }
+
+
+    /**
+     * 准备要发送到MQ中的数据
+     * @param params
+     * @return
+     */
+    private Map prepareMQData(Map<String, String> params) {
+        Map<String, String> messageMap = new HashMap<>();
+        messageMap.put("out_trade_no", params.get("out_trade_no")); //订单号
+        messageMap.put("trade_no", params.get("trade_no")); //支付宝交易流水号
+        messageMap.put("total_amount", params.get("total_amount")); //付款金额
+        //yyyy-MM-dd HH:mm:ss
+        messageMap.put("gmt_payment", params.get("gmt_payment")); //付款时间
+        return messageMap;
     }
 }

@@ -3,13 +3,16 @@ package cn.coderap.order.service.impl;
 import cn.coderap.entity.Result;
 import cn.coderap.goods.pojo.Sku;
 import cn.coderap.order.dao.OrderItemMapper;
+import cn.coderap.order.dao.OrderLogMapper;
 import cn.coderap.order.dao.OrderMapper;
 import cn.coderap.order.feign.CartFeign;
 import cn.coderap.order.feign.SkuFeign;
 import cn.coderap.order.pojo.Order;
 import cn.coderap.order.pojo.OrderItem;
+import cn.coderap.order.pojo.OrderLog;
 import cn.coderap.order.service.OrderService;
 import cn.coderap.user.feign.UserFeign;
+import cn.coderap.util.DateUtil;
 import cn.coderap.util.IdWorker;
 import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
@@ -37,6 +40,8 @@ public class OrderServiceImpl implements OrderService {
     private OrderItemMapper orderItemMapper;
     @Autowired
     private UserFeign userFeign;
+    @Autowired
+    private OrderLogMapper orderLogMapper;
 //    @Autowired
 //    private RabbitTemplate rabbitTemplate;
 
@@ -139,6 +144,36 @@ public class OrderServiceImpl implements OrderService {
         PageHelper.startPage(page, size);
         Example example = createExample(searchMap);
         return (Page<Order>) orderMapper.selectByExample(example);
+    }
+
+    /**
+     * 更改订单状态及记录订单日志
+     * @param map
+     */
+    @Override
+    public void changeOrderStatusAndOrderLog(Map<String,String> map) {
+        //获取订单对象
+        Order order = orderMapper.selectByPrimaryKey(map.get("out_trade_no"));
+        //订单存在并且未支付
+        if (order != null && "0".equals(order.getPayStatus())) {
+            order.setPayStatus("1");//已支付
+            order.setOrderStatus("1");//已支付
+            order.setTransactionId(map.get("trade_no")); //支付宝流水号
+            order.setUpdateTime(new Date());
+            order.setPayTime(DateUtil.str2Date(map.get("gmt_payment"), DateUtil.PATTERN_YYYY_MM_DDHHMMSS)); //支付时间
+            orderMapper.updateByPrimaryKeySelective(order);
+
+            //记录订单变动日志
+            OrderLog orderLog = new OrderLog();
+            orderLog.setId(idWorker.nextId() + "");
+            orderLog.setOperater("system");
+            orderLog.setOrderId(order.getId());
+            orderLog.setOperateTime(new Date());
+            orderLog.setOrderStatus("1");
+            orderLog.setPayStatus("1");
+            orderLog.setRemarks("Alipay流水:" + map.get("trade_no"));
+            orderLogMapper.insertSelective(orderLog);
+        }
     }
 
     private Example createExample(Map<String, Object> searchMap) {

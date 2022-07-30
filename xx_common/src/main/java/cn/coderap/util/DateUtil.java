@@ -12,6 +12,20 @@ public class DateUtil {
     //时间格式
     public static final String PATTERN_YYYYMMDDHH = "yyyyMMddHH";
     public static final String PATTERN_YYYY_MM_DDHHMM = "yyyy-MM-dd HH:mm";
+    public static final String PATTERN_YYYY_MM_DDHHMMSS = "yyyy-MM-dd HH:mm";
+
+    /**
+     * 将日期字符串转换成日期格式
+     */
+    public static Date str2Date(String dateStr,String pattern){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+        try {
+            return simpleDateFormat.parse(dateStr);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return new Date();
+    }
 
     /***
      * 将日期字符串从yyyy-MM-dd HH:mm格式转成yyyyMMddHH格式
