@@ -23,4 +23,6 @@ public interface OrderService {
     Page<Order> findPage(Map<String, Object> searchMap, int page, int size);
 
     void changeOrderStatusAndOrderLog(Map<String, String> map);
+
+    void close(String orderId);
 }

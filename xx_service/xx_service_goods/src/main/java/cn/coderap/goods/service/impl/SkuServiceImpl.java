@@ -86,7 +86,7 @@ public class SkuServiceImpl implements SkuService {
         Sku sku = skuMapper.selectByPrimaryKey(skuId);
         sku.setNum(sku.getNum() + num);
         sku.setSaleNum(sku.getSaleNum() - num);
-        skuMapper.updateByPrimaryKey(sku);
+        skuMapper.updateByPrimaryKeySelective(sku);
     }
 
     private Example createExample(Map<String, Object> searchMap){

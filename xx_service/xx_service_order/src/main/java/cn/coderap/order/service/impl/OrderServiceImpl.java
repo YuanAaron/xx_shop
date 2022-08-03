@@ -17,6 +17,7 @@ import cn.coderap.util.IdWorker;
 import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -42,8 +43,8 @@ public class OrderServiceImpl implements OrderService {
     private UserFeign userFeign;
     @Autowired
     private OrderLogMapper orderLogMapper;
-//    @Autowired
-//    private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     @Override
     public List<Order> findAll() {
@@ -110,8 +111,37 @@ public class OrderServiceImpl implements OrderService {
                 cartFeign.delete(orderItem.getSkuId());
             }
         }
-//        //将订单编号发送到ordercreate_queue中
-//        rabbitTemplate.convertAndSend("", "ordercreate_queue", order.getId());
+
+        //将订单编号发送到ordercreate_queue中
+        rabbitTemplate.convertAndSend("", "ordercreate_queue", order.getId());
+    }
+
+    @Override
+    public void close(String orderId) {
+        //关闭订单
+        Order order = orderMapper.selectByPrimaryKey(orderId);
+        order.setUpdateTime(new Date());//更新时间
+        order.setCloseTime(new Date());//关闭时间
+        order.setOrderStatus("4");//关闭状态
+        orderMapper.updateByPrimaryKeySelective(order);
+
+        //记录订单日志变动
+        OrderLog orderLog = new OrderLog();
+        orderLog.setRemarks(orderId + "订单已关闭");
+        orderLog.setOrderStatus("4");
+        orderLog.setOperateTime(new Date());
+        orderLog.setOperater("system");
+        orderLog.setId(String.valueOf(idWorker.nextId()));
+        orderLogMapper.insert(orderLog);
+
+        //恢复库存&销量
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrderId(orderId);
+        List<OrderItem> orderItems = orderItemMapper.select(orderItem);
+        for (OrderItem orderItem_ : orderItems) {
+            //调用商品微服务
+            skuFeign.resumeStockNum(orderItem_.getSkuId(),orderItem_.getNum());
+        }
     }
 
     private int finalMoney(OrderItem orderItem) {

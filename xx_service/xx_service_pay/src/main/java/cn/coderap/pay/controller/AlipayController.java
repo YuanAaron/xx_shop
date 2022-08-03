@@ -8,11 +8,14 @@ import cn.coderap.pay.feign.OrderFeign;
 import cn.coderap.pay.util.MatrixToImageWriter;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
+import com.alipay.api.domain.AlipayTradeCloseModel;
 import com.alipay.api.domain.AlipayTradePrecreateModel;
 import com.alipay.api.domain.AlipayTradeQueryModel;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeCloseRequest;
 import com.alipay.api.request.AlipayTradePrecreateRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
+import com.alipay.api.response.AlipayTradeCloseResponse;
 import com.alipay.api.response.AlipayTradePrecreateResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.google.zxing.BarcodeFormat;
@@ -119,13 +122,16 @@ public class AlipayController {
         } else {
             String subCode = response.getSubCode();
             if ("ACQ.SYSTEM_ERROR".equals(subCode)) {
-                result = "系统错误,重新发起请求";
+//                result = "系统错误,重新发起请求";
+                result = "SYSTEM_ERROR";
             }
             if ("ACQ.INVALID_PARAMETER".equals(subCode)) {
-                result = "参数无效,检查请求参数，修改后重新发起请求";
+//                result = "参数无效,检查请求参数，修改后重新发起请求";
+                result = "INVALID_PARAMETER";
             }
             if ("ACQ.TRADE_NOT_EXIST".equals(subCode)) {
-                result = "查询的交易不存在,检查传入的交易号是否正确，修改后重新发起请求";
+//                result = "查询的交易不存在,检查传入的交易号是否正确，修改后重新发起请求";
+                result = "TRADE_NOT_EXIST";
             }
         }
         return result;
@@ -153,6 +159,28 @@ public class AlipayController {
             return "success";
         } else {
             return "fail";
+        }
+    }
+
+    /**
+     * 关闭支付宝服务器的交易
+     * @param orderId
+     * @return
+     * @throws AlipayApiException
+     */
+    @RequestMapping("/close")
+    public Result close(@RequestParam String orderId) throws Exception {
+        AlipayTradeCloseRequest request = new AlipayTradeCloseRequest();
+        AlipayTradeCloseModel model = new AlipayTradeCloseModel();
+        model.setOutTradeNo(orderId);
+        request.setBizModel(model);
+        AlipayTradeCloseResponse response = alipayClient.execute(request);
+        if (response.isSuccess() && "10000".equals(response.getCode())) {
+            System.out.println(orderId + "交易已关闭");
+            return new Result(true, StatusCode.OK, "操作成功");
+        } else {
+            System.out.println(orderId + "交易没有正常关闭! " + response.getCode() + ":" + response.getSubMsg());
+            return new Result(false, StatusCode.ERROR, "操作失败");
         }
     }
 
