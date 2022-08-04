@@ -11,6 +11,7 @@ import cn.coderap.order.pojo.Order;
 import cn.coderap.order.pojo.OrderItem;
 import cn.coderap.order.pojo.OrderLog;
 import cn.coderap.order.service.OrderService;
+import cn.coderap.order.util.AdminToken;
 import cn.coderap.user.feign.UserFeign;
 import cn.coderap.util.DateUtil;
 import cn.coderap.util.IdWorker;
@@ -19,8 +20,16 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import tk.mybatis.mapper.entity.Example;
 
 import java.util.Date;
@@ -45,6 +54,10 @@ public class OrderServiceImpl implements OrderService {
     private OrderLogMapper orderLogMapper;
     @Autowired
     private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private LoadBalancerClient loadBalancerClient;
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Override
     public List<Order> findAll() {
@@ -140,8 +153,40 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> orderItems = orderItemMapper.select(orderItem);
         for (OrderItem orderItem_ : orderItems) {
             //调用商品微服务
-            skuFeign.resumeStockNum(orderItem_.getSkuId(),orderItem_.getNum());
+//            skuFeign.resumeStockNum(orderItem_.getSkuId(),orderItem_.getNum());
+            Result result = resumeStockNum(orderItem_);
+            System.out.println("恢复库存&销量: " + result);
         }
+    }
+
+    /**
+     * 利用RestTemplate发送post请求恢复库存&销量
+     * @param orderItem_
+     */
+    private Result resumeStockNum(OrderItem orderItem_) {
+        ServiceInstance serviceInstance = loadBalancerClient.choose("goods");
+        if (serviceInstance == null) {
+            throw new RuntimeException("找不到认证服务器");
+        }
+        //拼写目标地址
+        String path = serviceInstance.getUri().toString()+"/sku/resumeStockNum";
+        //封装参数
+        MultiValueMap<String,String> formData = new LinkedMultiValueMap<>();
+        formData.add("skuId", orderItem_.getSkuId());
+        formData.add("num", orderItem_.getNum()+"");
+        //定义header
+        MultiValueMap<String,String> header = new LinkedMultiValueMap<>();
+        header.add("Authorization","bearer "+ AdminToken.create());
+        //执行请求
+        Result result = null;
+        try {
+            ResponseEntity<Result> mapResponseEntity =
+                    restTemplate.exchange(path, HttpMethod.POST, new HttpEntity<MultiValueMap<String, String>>(formData, header), Result.class);
+            result = mapResponseEntity.getBody();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return result;
     }
 
     private int finalMoney(OrderItem orderItem) {

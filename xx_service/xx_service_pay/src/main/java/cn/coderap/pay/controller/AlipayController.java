@@ -103,7 +103,7 @@ public class AlipayController {
      * @return
      */
     @GetMapping("/queryStatus")
-    public String query(@RequestParam String out_trade_no) throws AlipayApiException {
+    public String query(@RequestParam("orderId") String out_trade_no) throws AlipayApiException {
         AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
         AlipayTradeQueryModel model = new AlipayTradeQueryModel();
         model.setOutTradeNo(out_trade_no);
