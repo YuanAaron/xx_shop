@@ -19,6 +19,7 @@ import com.alipay.api.response.AlipayTradeCloseResponse;
 import com.alipay.api.response.AlipayTradePrecreateResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -69,6 +71,19 @@ public class AlipayController {
         request.setNotifyUrl("http://f42svd.natappfree.cc/alipay/notify");//设置notifyUrl
 
         //3.创建预处理业务模型
+        createPrecreateModel(orderId, order, request);
+
+        //4.发送请求获取二维码链接
+        AlipayTradePrecreateResponse response = alipayClient.execute(request);
+        if (response.isSuccess() && "10000".equals(response.getCode())) {
+            //5.将二维码链接生成收款二维码
+            //获得二维码链接
+            createQrCode(orderId, response);
+        }
+        return new Result(true, StatusCode.OK, "交易预创建成功");
+    }
+
+    private void createPrecreateModel(String orderId, Order order, AlipayTradePrecreateRequest request) {
         AlipayTradePrecreateModel model = new AlipayTradePrecreateModel();
         //设置商户订单号
         model.setOutTradeNo(orderId);
@@ -78,22 +93,17 @@ public class AlipayController {
         model.setSubject("XX商城-订单支付");
         //将model放入到请求中
         request.setBizModel(model);
+    }
 
-        //4.发送请求获取二维码链接
-        AlipayTradePrecreateResponse response = alipayClient.execute(request);
-        if (response.isSuccess() && "10000".equals(response.getCode())) {
-            //5.将二维码链接生成收款二维码
-            //获得二维码链接
-            String qrCode = response.getQrCode();
-            QRCodeWriter writer = new QRCodeWriter();
-            BitMatrix bt = writer.encode(qrCode, BarcodeFormat.QR_CODE, 300, 300); //绘制二维码
-            //生成二维码,将二维码写到输出流,返回到页面
+    private void createQrCode(String orderId, AlipayTradePrecreateResponse response) throws WriterException, IOException {
+        String qrCode = response.getQrCode();
+        QRCodeWriter writer = new QRCodeWriter();
+        BitMatrix bt = writer.encode(qrCode, BarcodeFormat.QR_CODE, 300, 300); //绘制二维码
+        //生成二维码,将二维码写到输出流,返回到页面
 //            MatrixToImageWriter.writeToStream(bt, "jpg", httpResponse.getOutputStream());
-            //将二维码写入到磁盘
-            File file = new File("/Users/oshacker/IdeaProjects/xx_shop/xx_service/xx_service_pay/src/main/resources/qrcodes", orderId + ".jpg");
-            MatrixToImageWriter.writeToFile(bt, "jpg", file);
-        }
-        return new Result(true, StatusCode.OK, "交易预创建成功");
+        //将二维码写入到磁盘
+        File file = new File("/Users/oshacker/IdeaProjects/xx_shop/xx_service/xx_service_pay/src/main/resources/qrcodes", orderId + ".jpg");
+        MatrixToImageWriter.writeToFile(bt, "jpg", file);
     }
 
     /**
@@ -116,6 +126,10 @@ public class AlipayController {
          * 响应异常->错误原因
          * 其他问题->返回响应body
          */
+        return checkTradeStatus(response);
+    }
+
+    private String checkTradeStatus(AlipayTradeQueryResponse response) {
         String result = response.getBody();
         if (response.isSuccess() && "10000".equals(response.getCode())) {
             result = response.getTradeStatus();
@@ -151,8 +165,7 @@ public class AlipayController {
         boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayConfig.getAlipay_public_key(),
                 alipayConfig.getCharset(), alipayConfig.getSigntype()); //调用SDK验证签名
         //签名验证成功 & 用户已经成功支付
-//        if (signVerified && "TRADE_SUCCESS".equals(params.get("trade_status"))) {
-        if (signVerified) {
+        if (signVerified && "TRADE_SUCCESS".equals(params.get("trade_status"))) {
             //三、将数据发送MQ
             Map<String, String> message = prepareMQData(params);
             rabbitTemplate.convertAndSend(ORDER_EXCHANGE, "", message);
