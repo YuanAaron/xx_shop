@@ -6,6 +6,9 @@ import cn.coderap.order.pojo.Order;
 import cn.coderap.pay.config.AlipayConfig;
 import cn.coderap.pay.feign.OrderFeign;
 import cn.coderap.pay.util.MatrixToImageWriter;
+import cn.coderap.seckill.pojo.SeckillOrder;
+import cn.coderap.util.TokenDecode;
+import com.alibaba.fastjson.JSON;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.domain.AlipayTradeCloseModel;
@@ -24,6 +27,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -44,8 +48,12 @@ public class AlipayController {
     private AlipayConfig alipayConfig;
     @Autowired
     private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     private static final String ORDER_EXCHANGE = "order_exchange";
+    private static final String SECKILL_EXCHANGE = "seckill_exchange";
+    private static final String SECKILL_ORDER = "SeckillOrder_";
 
     /**
      * 请求二维码（为了保证接口的幂等性，前端调用该接口前先进性支付状态的校验，
@@ -53,16 +61,35 @@ public class AlipayController {
      *
      * 统一收单线下交易预创建
      * @param orderId  订单ID(out_trade_no)
+     * @param exchange 区分普通订单（order_exchange）和秒杀订单（seckill_exchange）
      */
     @RequestMapping("/qrCode")
-    public Result preCreate(@RequestParam String orderId) throws Exception {
+    public Result preCreate(@RequestParam String orderId, @RequestParam String exchange) throws Exception {
         //1.获得订单对象，判断支付状态
-        Order order = orderFeign.findById(orderId).getData();
-        if (order == null) {
-            return new Result(false, StatusCode.ERROR, "订单" + orderId + "不存在");
+        //如果是普通订单去订单微服务获取订单对象,如果是秒杀订单去redis中获取订单对象SeckillOrder
+        String totalMoney = null;
+        //普通订单
+        if (ORDER_EXCHANGE.equals(exchange)) {
+            Order order = orderFeign.findById(orderId).getData();
+            if (order == null) {
+                return new Result(false, StatusCode.ERROR, "普通订单" + orderId + "不存在");
+            }
+            if ("1".equals(order.getPayStatus())) {
+                return new Result(false, StatusCode.ERROR, "普通订单" + orderId + "已支付");
+            }
+            totalMoney = order.getTotalMoney().toString();
         }
-        if ("1".equals(order.getPayStatus())) {
-            return new Result(false, StatusCode.ERROR, "订单" + orderId + "已支付");
+        //秒杀订单
+        if (SECKILL_EXCHANGE.equals(exchange)) {
+            String username = TokenDecode.getUserInfo().get("username");
+            SeckillOrder order = ((SeckillOrder) redisTemplate.boundHashOps(SECKILL_ORDER).get(username));
+            if (order == null) {
+                return new Result(false, StatusCode.ERROR, "秒杀订单" + orderId + "不存在");
+            }
+            if ("1".equals(order.getStatus())) {
+                return new Result(false, StatusCode.ERROR, "秒杀订单" + orderId + "已支付");
+            }
+            totalMoney = order.getMoney().toString();
         }
 
         //2.创建AlipayTradePrecreateRequest对象
@@ -71,7 +98,7 @@ public class AlipayController {
         request.setNotifyUrl("http://f42svd.natappfree.cc/alipay/notify");//设置notifyUrl
 
         //3.创建预处理业务模型
-        createPrecreateModel(orderId, order, request);
+        createPrecreateModel(orderId, totalMoney, request, exchange);
 
         //4.发送请求获取二维码链接
         AlipayTradePrecreateResponse response = alipayClient.execute(request);
@@ -83,14 +110,23 @@ public class AlipayController {
         return new Result(true, StatusCode.OK, "交易预创建成功");
     }
 
-    private void createPrecreateModel(String orderId, Order order, AlipayTradePrecreateRequest request) {
+    private void createPrecreateModel(String orderId, String totalMoney, AlipayTradePrecreateRequest request, String exchange) {
         AlipayTradePrecreateModel model = new AlipayTradePrecreateModel();
         //设置商户订单号
         model.setOutTradeNo(orderId);
         //设置支付金额
-        model.setTotalAmount(order.getTotalMoney().toString());
+        model.setTotalAmount(totalMoney);
         //商品的标题/交易标题/订单标题/订单关键字等。
         model.setSubject("XX商城-订单支付");
+
+        //设置body
+        //1、区分普通订单还是秒杀订单
+        //2、传递username
+        Map<String, String> map = new HashMap<>();
+        map.put("exchange", exchange);
+        map.put("username", TokenDecode.getUserInfo().get("username"));
+        model.setBody(JSON.toJSONString(map));
+
         //将model放入到请求中
         request.setBizModel(model);
     }
@@ -167,8 +203,15 @@ public class AlipayController {
         //签名验证成功 & 用户已经成功支付
         if (signVerified && "TRADE_SUCCESS".equals(params.get("trade_status"))) {
             //三、将数据发送MQ
+            String body = params.get("body");
+            Map<String,String> map = JSON.parseObject(body, Map.class);
+            // 区分普通订单还是秒杀订单
+            String exchange = map.get("exchange");
+
             Map<String, String> message = prepareMQData(params);
-            rabbitTemplate.convertAndSend(ORDER_EXCHANGE, "", message);
+            message.put("username", map.get("username"));
+
+            rabbitTemplate.convertAndSend(exchange, "", message);
             return "success";
         } else {
             return "fail";

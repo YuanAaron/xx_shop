@@ -1,13 +1,17 @@
 package cn.coderap.seckill.service.impl;
 
 import cn.coderap.entity.SeckillStatus;
+import cn.coderap.seckill.dao.SeckillOrderMapper;
+import cn.coderap.seckill.pojo.SeckillOrder;
 import cn.coderap.seckill.service.SeckillOrderService;
 import cn.coderap.seckill.task.MultiThreadCreateOrderTask;
+import cn.coderap.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.Map;
 
 @Service
 public class SeckillOrderServiceImpl implements SeckillOrderService {
@@ -16,10 +20,13 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
     private MultiThreadCreateOrderTask task;
     @Autowired
     private RedisTemplate redisTemplate;
+    @Autowired
+    private SeckillOrderMapper secKillOrderMapper;
 
     private static final String SECKILL_ORDER_QUEUE = "SeckillOrderQueue";
     private static final String SECKILL_ORDER_STATUS_QUEUE = "SeckillOrderStatusQueue";
     private static final String SECKILL_ORDER_COUNT = "SeckillOrderCount";
+    private static final String SECKILL_ORDER = "SeckillOrder_";
 
     /**
      * 基础秒杀下单存在的问题：
@@ -58,5 +65,27 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
     @Override
     public SeckillStatus queryStatus(String username) {
         return (SeckillStatus) redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).get(username);
+    }
+
+    /**
+     * 此处是不能获取username的,只能传过来，具体做法是和exchange一样通过支付宝的参数body传过来
+     * @param username
+     * @param map
+     */
+    @Override
+    public void updateSeckillOrderStatus(String username, Map<String, String> map) {
+        SeckillOrder seckillOrder = (SeckillOrder) redisTemplate.boundHashOps(SECKILL_ORDER).get(username);
+        if (seckillOrder != null) {
+            seckillOrder.setStatus("1"); //已支付
+            seckillOrder.setTransactionId(map.get("trade_no"));
+            seckillOrder.setPayTime(DateUtil.str2Date(map.get("gmt_payment"), DateUtil.PATTERN_YYYY_MM_DDHHMMSS));
+            //1.修改订单状态(秒杀订单在redis中)，将修改状态后的订单持久到数据库中
+            secKillOrderMapper.insertSelective(seckillOrder);
+            //2.删除redis中的订单信息
+            redisTemplate.boundHashOps(SECKILL_ORDER).delete(username);
+            //3.清除用户排队抢单的信息
+            redisTemplate.boundHashOps(SECKILL_ORDER_COUNT).delete(username);
+            redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).delete(username);
+        }
     }
 }
