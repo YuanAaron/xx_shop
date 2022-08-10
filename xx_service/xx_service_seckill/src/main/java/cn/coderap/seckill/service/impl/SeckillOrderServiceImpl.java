@@ -56,7 +56,7 @@ public class SeckillOrderServiceImpl implements SeckillOrderService {
         SeckillStatus seckillStatus = new SeckillStatus(username, new Date(), 1, id, time);
         //存入redis list中进行排队
         redisTemplate.boundListOps(SECKILL_ORDER_QUEUE).leftPush(seckillStatus);
-        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).put(username, seckillStatus.getStatus());
+        redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).put(username, seckillStatus);
         //创建订单
         task.createOrder();
         System.out.println("我不会等你，证明是异步的");

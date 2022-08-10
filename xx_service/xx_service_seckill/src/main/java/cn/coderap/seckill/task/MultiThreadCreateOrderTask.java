@@ -5,6 +5,8 @@ import cn.coderap.seckill.dao.SeckillGoodsMapper;
 import cn.coderap.seckill.pojo.SeckillGoods;
 import cn.coderap.seckill.pojo.SeckillOrder;
 import cn.coderap.util.IdWorker;
+import com.alibaba.fastjson.JSON;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -20,6 +22,8 @@ public class MultiThreadCreateOrderTask {
     private IdWorker idWorker;
     @Autowired
     private SeckillGoodsMapper seckillGoodsMapper;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     private static final String SECKILL_GOODS = "SeckillGoods_";
     private static final String SECKILL_ORDER = "SeckillOrder_";
@@ -34,7 +38,7 @@ public class MultiThreadCreateOrderTask {
     @Async
     public void createOrder() {
         System.out.println("MultiThreadCreateOrderTask....createOrder...start");
-        // 生产环境下去掉延迟
+        //TODO 生产环境下去掉延迟
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
@@ -54,7 +58,7 @@ public class MultiThreadCreateOrderTask {
         //1.判断有没有库存
         //1.1先从该商品的库存队列中获取商品id
         Object rightPop = redisTemplate.boundListOps(SECKILL_GOODS_QUEUE + id).rightPop();
-        //如果从没有商品的库存队列获取到商品id，表示没有库存
+        //如果没有从商品的库存队列获取到商品id，表示没有库存
         if (rightPop == null) {
             //清理掉排队信息，允许再次抢单
             redisTemplate.boundHashOps(SECKILL_ORDER_COUNT).delete(username);
@@ -85,6 +89,10 @@ public class MultiThreadCreateOrderTask {
         seckillStatus.setOrderId(seckillOrder.getId());
         redisTemplate.boundHashOps(SECKILL_ORDER_STATUS_QUEUE).put(username, seckillStatus);
 
+        //超时未支付
+        //将订单编号发送到seckillcreate_queue中
+        rabbitTemplate.convertAndSend("", "seckillcreate_queue", JSON.toJSONString(seckillStatus));
+
         //3.库存递减
         seckillGoods.setStockCount(seckillGoods.getStockCount() - 1);
 
@@ -100,7 +108,7 @@ public class MultiThreadCreateOrderTask {
         } else {
             //3.2当前购买的商品不是最后一件
             //3.2.1将库存数据更新到redis中
-            redisTemplate.boundHashOps(SECKILL_GOODS + time).put(id, seckillGoods);
+            redisTemplate.boundHashOps(SECKILL_GOODS + time).put(id, seckillGoods); //TODO 这里的库存没有使用redis数据
         }
         System.out.println("MultiThreadCreateOrderTask....createOrder...end...下单成功");
     }
