@@ -242,20 +242,20 @@ public class SearchServiceImpl implements SearchService {
             }
         }
 
-//        //价格过滤
-//        //价格 0-500元   500-1000元   1000-1500元   1500-2000元   2000-3000元   3000元以上
-//        //中文替换掉
-//        String price = paramMap.get("price");
-//        if (!StringUtils.isEmpty(price)) {
-//            price = price.replace("元", "").replace("以上", "");
-//            String[] prices = price.split("-");
-//            if (prices != null && prices.length > 0) {
-//                boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").gte(prices[0]));
-//                if (prices.length == 2) {
-//                    boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").lte(prices[1]));
-//                }
-//            }
-//        }
+        //价格过滤
+        //价格 0-500元   500-1000元   1000-1500元   1500-2000元   2000-3000元   3000元以上
+        //中文替换掉
+        String price = paramMap.get("price");
+        if (!StringUtils.isEmpty(price)) {
+            price = price.replace("元", "").replace("以上", "");
+            String[] prices = price.split("-");
+            if (prices != null && prices.length > 0) {
+                boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").gte(prices[0]));
+                if (prices.length == 2) {
+                    boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").lte(prices[1]));
+                }
+            }
+        }
     }
 
     private BoolQueryBuilder setKeyWord(Map<String, String> paramMap) {
