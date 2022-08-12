@@ -11,4 +11,6 @@ public interface SearchService {
     void importDataToES(String spuId);
 
     void deleteDataFromES(String spuId);
+
+    Map search(Map<String, String> paramMap);
 }
