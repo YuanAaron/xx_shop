@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @Service
 public class SearchServiceImpl implements SearchService {
 
-    private static final Integer PAGE_SIZE = 5;
+    private static final Integer PAGE_SIZE = 20;
 
     @Autowired
     private ElasticsearchTemplate esTemplate;
@@ -124,8 +124,9 @@ public class SearchServiceImpl implements SearchService {
 //        setHighlight(nativeSearchQueryBuilder);
 //        //设置排序
 //        setOrder(paramMap, nativeSearchQueryBuilder);
-//        //设置分页  页码，每页展示多少条数据
-//        setPageInfo(paramMap, nativeSearchQueryBuilder);
+
+        //设置分页  页码、每页展示多少条数据
+        setPageInfo(paramMap, nativeSearchQueryBuilder);
 
         //2.执行查询
         AggregatedPage<SkuInfo> aggregatedPage = esTemplate.queryForPage(nativeSearchQueryBuilder.build(), SkuInfo.class);
