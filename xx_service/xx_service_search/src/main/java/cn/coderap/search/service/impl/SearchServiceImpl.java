@@ -109,13 +109,17 @@ public class SearchServiceImpl implements SearchService {
         //1.构建查询条件
         NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
         nativeSearchQueryBuilder.withQuery(boolQueryBuilder);
+
         //添加品牌（分组）聚合
         String skuBrand = "skuBrand"; //brandName的别名
         nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuBrand).field("brandName"));
-//        //添加规格（分组）聚合
-//        String skuSpec = "skuSpec";
-//        //nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuSpec).field("spec.keyword").size(10000));
+
+        //添加规格（分组）聚合
+        String skuSpec = "skuSpec";
 //        nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuSpec).field("spec.keyword"));
+        // 优化规格列表条目缺失：size默认为10，我的理解是默认从10条记录中取规格
+        nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuSpec).field("spec.keyword").size(10000));
+
 //        //设置高亮域
 //        setHighlight(nativeSearchQueryBuilder);
 //        //设置排序
@@ -136,14 +140,14 @@ public class SearchServiceImpl implements SearchService {
         resultMap.put("totalPages", aggregatedPage.getTotalPages());
         //取出品牌聚合
         getBrandAgg(resultMap, skuBrand, aggregatedPage);
-//        //取出规格聚合并完成类型转换
-//        getSpecAgg(resultMap, skuSpec, aggregatedPage);
+        //取出规格聚合并完成类型转换
+        getSpecAgg(resultMap, skuSpec, aggregatedPage);
         return resultMap;
     }
 
     private void getSpecAgg(Map<String, Object> resultMap, String skuSpec, AggregatedPage<SkuInfo> aggregatedPage) {
         StringTerms specTerms = (StringTerms) aggregatedPage.getAggregation(skuSpec);
-        //[{'颜色': '蓝色', '尺码': '44'},{'颜色': '灰色', '尺码': '35'}]
+        //["{'颜色': '蓝色', '尺码': '44'}","{'颜色': '灰色', '尺码': '35'}"]
         List<String> specList = specTerms.getBuckets().stream().map(bucket -> bucket.getKeyAsString()).collect(Collectors.toList());
         //定义返回结果
         Map<String, Set<String>> specMap = specList(specList);
@@ -231,13 +235,13 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.filter(QueryBuilders.termQuery("brandName", paramMap.get("brand")));
         }
 
-//        //规格过滤  spec_xxx=value
-//        for (String key : paramMap.keySet()) {
-//            if (key.startsWith("spec_")) {
-//                String value = paramMap.get(key);
-//                boolQueryBuilder.filter(QueryBuilders.termQuery("specMap." + key.substring(5) + ".keyword", value));
-//            }
-//        }
+        //规格过滤  规格参数约定：spec_xxx=value
+        for (String key : paramMap.keySet()) {
+            if (key.startsWith("spec_")) {
+                boolQueryBuilder.filter(QueryBuilders.termQuery("specMap." + key.substring(5) + ".keyword", paramMap.get(key)));
+            }
+        }
+
 //        //价格过滤
 //        //价格 0-500元   500-1000元   1000-1500元   1500-2000元   2000-3000元   3000元以上
 //        //中文替换掉
@@ -265,7 +269,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     /**
-     * 格式转换
+     * 格式转换：将ES中的 Map<String,String> 转换为页面中的 Map<String,Set<String>>
      *
      * @param specList
      * @return
