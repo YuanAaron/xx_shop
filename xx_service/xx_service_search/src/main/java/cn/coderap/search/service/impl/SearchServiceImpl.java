@@ -103,15 +103,15 @@ public class SearchServiceImpl implements SearchService {
         Map<String, Object> resultMap = new HashMap();
         //指定关键词
         BoolQueryBuilder boolQueryBuilder = setKeyWord(paramMap);
-//        //指定过滤条件
-//        fieldsFilter(paramMap, boolQueryBuilder);
+        //指定过滤条件
+        fieldsFilter(paramMap, boolQueryBuilder);
 
         //1.构建查询条件
         NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
         nativeSearchQueryBuilder.withQuery(boolQueryBuilder);
         //添加品牌（分组）聚合
-//        String skuBrand = "skuBrand"; //brandName的别名
-//        nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuBrand).field("brandName"));
+        String skuBrand = "skuBrand"; //brandName的别名
+        nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuBrand).field("brandName"));
 //        //添加规格（分组）聚合
 //        String skuSpec = "skuSpec";
 //        //nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuSpec).field("spec.keyword").size(10000));
@@ -134,8 +134,8 @@ public class SearchServiceImpl implements SearchService {
         resultMap.put("total", aggregatedPage.getTotalElements());
         //总页数
         resultMap.put("totalPages", aggregatedPage.getTotalPages());
-//        //取出品牌聚合
-//        getBrandAgg(resultMap, skuBrand, aggregatedPage);
+        //取出品牌聚合
+        getBrandAgg(resultMap, skuBrand, aggregatedPage);
 //        //取出规格聚合并完成类型转换
 //        getSpecAgg(resultMap, skuSpec, aggregatedPage);
         return resultMap;
@@ -231,27 +231,27 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.filter(QueryBuilders.termQuery("brandName", paramMap.get("brand")));
         }
 
-        //规格过滤  spec_xxx=value
-        for (String key : paramMap.keySet()) {
-            if (key.startsWith("spec_")) {
-                String value = paramMap.get(key);
-                boolQueryBuilder.filter(QueryBuilders.termQuery("specMap." + key.substring(5) + ".keyword", value));
-            }
-        }
-        //价格过滤
-        //价格 0-500元   500-1000元   1000-1500元   1500-2000元   2000-3000元   3000元以上
-        //中文替换掉
-        String price = paramMap.get("price");
-        if (!StringUtils.isEmpty(price)) {
-            price = price.replace("元", "").replace("以上", "");
-            String[] prices = price.split("-");
-            if (prices != null && prices.length > 0) {
-                boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").gte(prices[0]));
-                if (prices.length == 2) {
-                    boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").lte(prices[1]));
-                }
-            }
-        }
+//        //规格过滤  spec_xxx=value
+//        for (String key : paramMap.keySet()) {
+//            if (key.startsWith("spec_")) {
+//                String value = paramMap.get(key);
+//                boolQueryBuilder.filter(QueryBuilders.termQuery("specMap." + key.substring(5) + ".keyword", value));
+//            }
+//        }
+//        //价格过滤
+//        //价格 0-500元   500-1000元   1000-1500元   1500-2000元   2000-3000元   3000元以上
+//        //中文替换掉
+//        String price = paramMap.get("price");
+//        if (!StringUtils.isEmpty(price)) {
+//            price = price.replace("元", "").replace("以上", "");
+//            String[] prices = price.split("-");
+//            if (prices != null && prices.length > 0) {
+//                boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").gte(prices[0]));
+//                if (prices.length == 2) {
+//                    boolQueryBuilder.filter(QueryBuilders.rangeQuery("price").lte(prices[1]));
+//                }
+//            }
+//        }
     }
 
     private BoolQueryBuilder setKeyWord(Map<String, String> paramMap) {
