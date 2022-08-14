@@ -120,8 +120,8 @@ public class SearchServiceImpl implements SearchService {
         // 优化规格列表条目缺失：size默认为10，我的理解是默认从10条记录中取规格
         nativeSearchQueryBuilder.addAggregation(AggregationBuilders.terms(skuSpec).field("spec.keyword").size(10000));
 
-//        //设置高亮域
-//        setHighlight(nativeSearchQueryBuilder);
+        //设置高亮域
+        setHighlight(nativeSearchQueryBuilder);
 
         //设置排序
         setOrder(paramMap, nativeSearchQueryBuilder);
@@ -130,8 +130,8 @@ public class SearchServiceImpl implements SearchService {
         setPageInfo(paramMap, nativeSearchQueryBuilder);
 
         //2.执行查询
-        AggregatedPage<SkuInfo> aggregatedPage = esTemplate.queryForPage(nativeSearchQueryBuilder.build(), SkuInfo.class);
-//        AggregatedPage<SkuInfo> aggregatedPage = executeQuery(nativeSearchQueryBuilder);
+//        AggregatedPage<SkuInfo> aggregatedPage = esTemplate.queryForPage(nativeSearchQueryBuilder.build(), SkuInfo.class);
+        AggregatedPage<SkuInfo> aggregatedPage = executeQuery(nativeSearchQueryBuilder);
 
         //3.从返回结果中获得信息
         //商品结果集
@@ -164,47 +164,45 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private AggregatedPage<SkuInfo> executeQuery(NativeSearchQueryBuilder nativeSearchQueryBuilder) {
-        return esTemplate.queryForPage(
-                nativeSearchQueryBuilder.build(),
-                SkuInfo.class,
-                new SearchResultMapper() {
-                    /**
-                     * 将高亮数据替换非高亮的数据
-                     * @param response 封装了返回结果集
-                     * @param clazz    映射类型
-                     * @param pageable 分页对象
-                     * @param <T>
-                     * @return
-                     */
-                    @Override
-                    public <T> AggregatedPage<T> mapResults(SearchResponse response, Class<T> clazz, Pageable pageable) {
-                        List<T> list = new ArrayList<>();
-                        //获得结果集数据
-                        SearchHits hits = response.getHits();
-                        for (SearchHit searchHit : hits) {
-                            //没有高亮的数据,需要获得高亮域的数据，替换SkuInfo中没有高亮的数据
-                            SkuInfo skuInfo = JSON.parseObject(searchHit.getSourceAsString(), SkuInfo.class);
-                            //获取高亮的数据
-                            Map<String, HighlightField> highlightFields = searchHit.getHighlightFields();
-                            //指定了高亮域
-                            if (highlightFields != null && highlightFields.size() > 0) {
-                                HighlightField highlightField = highlightFields.get("name");
-                                if (highlightField != null) {
-                                    //取出高亮数据
-                                    Text[] fragments = highlightField.getFragments();
-                                    StringBuffer stringBuffer = new StringBuffer();
-                                    for (Text text : fragments) {
-                                        stringBuffer.append(text.toString());
-                                    }
-                                    //替换
-                                    skuInfo.setName(stringBuffer.toString());
-                                    list.add((T)skuInfo);
-                                }
+        return esTemplate.queryForPage(nativeSearchQueryBuilder.build(), SkuInfo.class, new SearchResultMapper() {
+            /**
+             * 将高亮数据替换非高亮的数据
+             * @param response 封装了返回结果集
+             * @param clazz    映射类型
+             * @param pageable 分页对象
+             * @param <T>
+             * @return
+             */
+            @Override
+            public <T> AggregatedPage<T> mapResults(SearchResponse response, Class<T> clazz, Pageable pageable) {
+                List<T> list = new ArrayList<>();
+                //获得结果集数据
+                SearchHits hits = response.getHits();
+                for (SearchHit searchHit : hits) {
+                    //没有高亮的数据
+                    SkuInfo skuInfo = JSON.parseObject(searchHit.getSourceAsString(), SkuInfo.class);
+                    //需要获得高亮域的数据，替换SkuInfo中没有高亮的数据
+                    //获取高亮的数据
+                    Map<String, HighlightField> highlightFields = searchHit.getHighlightFields();
+                    //指定了高亮域
+                    if (highlightFields != null && highlightFields.size() > 0) {
+                        HighlightField highlightField = highlightFields.get("name");
+                        if (highlightField != null) {
+                            //取出高亮数据
+                            Text[] fragments = highlightField.getFragments();
+                            StringBuffer stringBuffer = new StringBuffer();
+                            for (Text text : fragments) {
+                                stringBuffer.append(text.toString());
                             }
+                            //替换
+                            skuInfo.setName(stringBuffer.toString());
+                            list.add((T)skuInfo);
                         }
-                        return new AggregatedPageImpl<T>(list,pageable,hits.getTotalHits(),response.getAggregations());
                     }
-                });
+                }
+                return new AggregatedPageImpl<T>(list,pageable,hits.getTotalHits(),response.getAggregations());
+            }
+        });
     }
 
     private void setPageInfo(Map<String, String> paramMap, NativeSearchQueryBuilder nativeSearchQueryBuilder) {
