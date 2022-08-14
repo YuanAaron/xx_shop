@@ -122,8 +122,9 @@ public class SearchServiceImpl implements SearchService {
 
 //        //设置高亮域
 //        setHighlight(nativeSearchQueryBuilder);
-//        //设置排序
-//        setOrder(paramMap, nativeSearchQueryBuilder);
+
+        //设置排序
+        setOrder(paramMap, nativeSearchQueryBuilder);
 
         //设置分页  页码、每页展示多少条数据
         setPageInfo(paramMap, nativeSearchQueryBuilder);
