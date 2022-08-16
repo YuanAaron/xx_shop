@@ -18,6 +18,7 @@ import cn.coderap.util.IdWorker;
 import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.seata.spring.annotation.GlobalTransactional;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
@@ -70,6 +71,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     // TODO 库存不足时，仍然会向tb_order和tb_order_item中插入记录，这肯定是不合适的，分布式事务？？？
+    @GlobalTransactional(name="order_add")
     @Override
     public void add(Order order) {
         //1.获取购物车列表
@@ -124,6 +126,8 @@ public class OrderServiceImpl implements OrderService {
                 cartFeign.delete(orderItem.getSkuId());
             }
         }
+
+//        int a = 1 /0;
 
         //将订单编号发送到ordercreate_queue中
         rabbitTemplate.convertAndSend("", "ordercreate_queue", order.getId());
