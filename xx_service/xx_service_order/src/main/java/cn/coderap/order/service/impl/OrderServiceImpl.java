@@ -70,7 +70,7 @@ public class OrderServiceImpl implements OrderService {
         return orderMapper.selectByPrimaryKey(id);
     }
 
-    // TODO 库存不足时，仍然会向tb_order和tb_order_item中插入记录，这肯定是不合适的，分布式事务？？？
+    // 库存不足时，仍然会向tb_order和tb_order_item中插入记录，这肯定是不合适的,需要使用分布式事务
     @GlobalTransactional(name="order_add")
     @Override
     public void add(Order order) {
