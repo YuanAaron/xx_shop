@@ -1,5 +1,6 @@
 package cn.coderap.user.service;
 
+import cn.coderap.order.pojo.Task;
 import cn.coderap.user.pojo.User;
 import com.github.pagehelper.Page;
 
@@ -22,4 +23,6 @@ public interface UserService {
     Page<User> findPage(Map searchMap, int page, int size);
 
     void addUserPoints(String username, Integer points);
+
+    int addUserPoints(Task task);
 }

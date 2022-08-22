@@ -1,22 +1,33 @@
 package cn.coderap.user.service.impl;
 
+import cn.coderap.order.pojo.Task;
+import cn.coderap.user.dao.PointLogMapper;
 import cn.coderap.user.dao.UserMapper;
+import cn.coderap.user.pojo.PointLog;
 import cn.coderap.user.pojo.User;
 import cn.coderap.user.service.UserService;
+import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import tk.mybatis.mapper.entity.Example;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private PointLogMapper pointLogMapper;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     public List<User> findAll() {
@@ -60,6 +71,38 @@ public class UserServiceImpl implements UserService {
     public void addUserPoints(String username, Integer points) {
         int rows = userMapper.addPoints(username,points);
         System.out.println(rows);
+    }
+
+    @Transactional
+    @Override
+    public int addUserPoints(Task task) {
+        Map info = JSON.parseObject(task.getRequestBody(), Map.class);
+        String username = String.valueOf(info.get("username"));
+        String orderId = String.valueOf(info.get("orderId"));
+        int points = (int) info.get("point");
+
+        //判断当前订单是否操作过（二次过滤：防止该订单的积分相关流程走完后，即清理完redis中的该订单后，mq仍然存在重复订单）
+        PointLog pointLog = pointLogMapper.selectByPrimaryKey(orderId);
+        if (pointLog != null){
+            return 0;
+        }
+
+        //修改用户积分
+        int result = userMapper.addPoints(username, points);
+        if (result <= 0){
+            return result;
+        }
+
+        //添加积分日志表记录
+        pointLog = new PointLog();
+        pointLog.setOrderId(orderId);
+        pointLog.setPoint(points);
+        pointLog.setUsername(username);
+        result = pointLogMapper.insertSelective(pointLog);
+        if (result <= 0){
+            return result;
+        }
+        return result;
     }
 
     private Example createExample(Map<String, Object> searchMap){

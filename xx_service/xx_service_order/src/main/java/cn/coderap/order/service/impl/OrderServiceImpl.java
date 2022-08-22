@@ -1,15 +1,18 @@
 package cn.coderap.order.service.impl;
 
+import cn.coderap.constant.RabbitmqConstant;
 import cn.coderap.entity.Result;
 import cn.coderap.goods.pojo.Sku;
 import cn.coderap.order.dao.OrderItemMapper;
 import cn.coderap.order.dao.OrderLogMapper;
 import cn.coderap.order.dao.OrderMapper;
+import cn.coderap.order.dao.TaskMapper;
 import cn.coderap.order.feign.CartFeign;
 import cn.coderap.order.feign.SkuFeign;
 import cn.coderap.order.pojo.Order;
 import cn.coderap.order.pojo.OrderItem;
 import cn.coderap.order.pojo.OrderLog;
+import cn.coderap.order.pojo.Task;
 import cn.coderap.order.service.OrderService;
 import cn.coderap.order.util.AdminToken;
 import cn.coderap.user.feign.UserFeign;
@@ -34,6 +37,7 @@ import org.springframework.web.client.RestTemplate;
 import tk.mybatis.mapper.entity.Example;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,6 +63,8 @@ public class OrderServiceImpl implements OrderService {
     private LoadBalancerClient loadBalancerClient;
     @Autowired
     private RestTemplate restTemplate;
+    @Autowired
+    private TaskMapper taskMapper;
 
     @Override
     public List<Order> findAll() {
@@ -113,7 +119,20 @@ public class OrderServiceImpl implements OrderService {
 
         //积分累加(这里自定义的积分规则为：积分=支付价格/10）
         //TODO 异步积分累积：mq中发送一个消息 username,point
-        userFeign.addPoints(order.getPayMoney()/10);
+//        userFeign.addPoints(order.getPayMoney()/10);
+        //5.积分相关
+        //5.1 设置任务表数据并保存
+        Task task = new Task();
+        task.setCreateTime(new Date());
+        task.setUpdateTime(new Date());
+        task.setMqExchange(RabbitmqConstant.POINT_EXCHANGE);
+        task.setMqRoutingkey(RabbitmqConstant.POINT_ADD_ROUTING_KEY);
+        Map map = new HashMap();
+        map.put("username",order.getUsername());
+        map.put("orderId",order.getId());
+        map.put("point",order.getPayMoney()/10);
+        task.setRequestBody(JSON.toJSONString(map));
+        taskMapper.insert(task);
 
         //3.设置订单明细信息并保存
         for (OrderItem orderItem : orderItemList) {
@@ -131,6 +150,9 @@ public class OrderServiceImpl implements OrderService {
 
         //将订单编号发送到ordercreate_queue中
         rabbitTemplate.convertAndSend("", "ordercreate_queue", order.getId());
+
+        //TODO 前面用seata实现了分布式事务，即创建订单、扣减库存同时成功、同时失败。但是当这里抛出异常时，会出现创建订单、扣减库存回滚，但消息发送成功的情况，这显然不合适
+//        int a = 1 /0;
     }
 
     @Override
