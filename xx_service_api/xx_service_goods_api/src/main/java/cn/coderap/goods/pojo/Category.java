@@ -4,7 +4,9 @@ import lombok.Data;
 
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * category实体类
@@ -23,4 +25,7 @@ public class Category implements Serializable {
     private Integer seq;//排序
     private Integer parentId;//上级ID
     private Integer templateId;//模板ID
+
+    @Transient
+    private List<Category> subList;
 }

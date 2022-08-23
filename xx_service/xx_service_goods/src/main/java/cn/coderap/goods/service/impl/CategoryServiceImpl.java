@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import tk.mybatis.mapper.entity.Example;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -20,8 +21,37 @@ public class CategoryServiceImpl implements CategoryService {
     private CategoryMapper categoryMapper;
 
     @Override
-    public List<Category> findAll() {
-        return categoryMapper.selectAll();
+    public List<Category> findAllWithTree() {
+        //1.查出所有分类
+        List<Category> categories = categoryMapper.selectAll();
+        /**
+         * 一级菜单与二级菜单、二级菜单与三级菜单...，满足cat2.getParentId() == cat1.getId()递推关系，因此可以递归；
+         * 零级菜单（虚拟）与一级菜单之间不满足该关系，因此需要单独列出
+         */
+        //2、组装成父子的树形结构
+        //2.1、找到所有的一级分类
+        List<Category> cat1List = new ArrayList<>();
+        for (Category cat1 : categories) {
+            if (cat1.getParentId() == 0) {
+                cat1.setSubList(getSubList(cat1,categories));
+                cat1List.add(cat1);
+            }
+        }
+        cat1List.sort((c1,c2) -> c1.getSeq() - c2.getSeq());
+        return cat1List;
+    }
+
+    //2.2、递归查找所有菜单的子菜单
+    private List<Category> getSubList(Category cat1, List<Category> categories) {
+        List<Category> cat2List = new ArrayList<>();
+        for (Category cat2 : categories) {
+            if (cat2.getParentId() == cat1.getId()) {
+                cat2.setSubList(getSubList(cat2,categories));
+                cat2List.add(cat2);
+            }
+        }
+        cat2List.sort((c1,c2) -> c1.getSeq() - c2.getSeq());
+        return cat2List;
     }
 
     @Override

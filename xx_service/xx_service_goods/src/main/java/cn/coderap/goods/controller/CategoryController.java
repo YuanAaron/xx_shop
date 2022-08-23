@@ -21,12 +21,12 @@ public class CategoryController {
     private CategoryService categoryService;
 
     /**
-     * 查询全部数据
+     * 查询所有分类及子分类，并以树形结构组装起来
      * @return
      */
     @GetMapping
     public Result findAll(){
-        List<Category> categoryList = categoryService.findAll();
+        List<Category> categoryList = categoryService.findAllWithTree();
         return new Result(true, StatusCode.OK,"查询成功",categoryList) ;
     }
 

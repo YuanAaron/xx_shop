@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface CategoryService {
-    List<Category> findAll();
+    List<Category> findAllWithTree();
 
     Category findById(Integer id);
 
