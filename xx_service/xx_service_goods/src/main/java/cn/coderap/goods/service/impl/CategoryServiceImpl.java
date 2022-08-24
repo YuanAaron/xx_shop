@@ -3,6 +3,7 @@ package cn.coderap.goods.service.impl;
 import cn.coderap.goods.dao.CategoryMapper;
 import cn.coderap.goods.pojo.Category;
 import cn.coderap.goods.pojo.vo.Category2Vo;
+import cn.coderap.goods.pojo.vo.Category3Vo;
 import cn.coderap.goods.service.CategoryService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -12,6 +13,7 @@ import org.springframework.util.CollectionUtils;
 import tk.mybatis.mapper.entity.Example;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -99,6 +101,39 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public List<Category2Vo> getSubCategory2List(Integer id) {
         return categoryMapper.getSubCategory2List(id);
+    }
+
+    @Override
+    public Map<String, List<Category2Vo>> getSubCategory2Map() {
+        List<Category> categories = categoryMapper.selectAll();
+
+        List<Category> category1List = getByParentId(categories, 0);
+
+        Map<String, List<Category2Vo>> map = new HashMap<>();
+        for (Category cat1 : category1List) {
+            List<Category2Vo> category2VoList = new ArrayList<>();
+            List<Category> category2List = getByParentId(categories, cat1.getId());
+            for (Category cat2 : category2List) {
+                List<Category> category3List = getByParentId(categories, cat2.getId());
+                List<Category3Vo> category3VoList = new ArrayList<>();
+                for (Category cat3 : category3List) {
+                    category3VoList.add(new Category3Vo(cat3.getId(),cat3.getName(),cat3.getParentId()));
+                }
+                category2VoList.add(new Category2Vo(cat2.getId(),cat2.getName(),cat2.getParentId(),category3VoList));
+            }
+            map.put(String.valueOf(cat1.getId()),category2VoList);
+        }
+        return map;
+    }
+
+    private List<Category> getByParentId(List<Category> categoryList, int id) {
+        List<Category> list = new ArrayList<>();
+        for (Category category : categoryList) {
+            if (category.getParentId() == id) {
+                list.add(category);
+            }
+        }
+        return list;
     }
 
     private Example createExample(Map<String, Object> searchMap){

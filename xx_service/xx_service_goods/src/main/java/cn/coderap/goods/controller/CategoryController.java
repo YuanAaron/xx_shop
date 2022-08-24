@@ -112,11 +112,20 @@ public class CategoryController {
     }
 
     /**
-     * 获取二级分类及三级小分类
+     * 获取二级分类及三级小分类(懒加载）
      */
     @GetMapping("/subCat/{id}")
     public Result subCat(@PathVariable("id") Integer id) {
         List<Category2Vo> category2VoList = categoryService.getSubCategory2List(id);
         return new Result(true,StatusCode.OK,"获取二级分类及三级小分类成功",category2VoList);
+    }
+
+    /**
+     * 获取二级分类及三级小分类(非懒加载）
+     */
+    @GetMapping("/subCat")
+    public Result subCat() {
+        Map<String,List<Category2Vo>> subCategory2Map = categoryService.getSubCategory2Map();
+        return new Result(true,StatusCode.OK,"获取二级分类及三级小分类成功",subCategory2Map);
     }
 }

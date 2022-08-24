@@ -25,4 +25,6 @@ public interface CategoryService {
     List<Category> getCategory1List();
 
     List<Category2Vo> getSubCategory2List(Integer id);
+
+    Map<String, List<Category2Vo>> getSubCategory2Map();
 }
