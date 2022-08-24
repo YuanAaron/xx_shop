@@ -4,6 +4,7 @@ import cn.coderap.constant.StatusCode;
 import cn.coderap.entity.PageResult;
 import cn.coderap.entity.Result;
 import cn.coderap.goods.pojo.Category;
+import cn.coderap.goods.pojo.vo.Category2Vo;
 import cn.coderap.goods.service.CategoryService;
 import com.github.pagehelper.Page;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,5 +100,23 @@ public class CategoryController {
         Page<Category> pageList = categoryService.findPage(searchMap, page, size);
         PageResult pageResult=new PageResult(pageList.getTotal(),pageList.getResult());
         return new Result(true,StatusCode.OK,"查询成功",pageResult);
+    }
+
+    /**
+     * 获取一级分类
+     */
+    @GetMapping("/cat1")
+    public Result cat1() {
+        List<Category> category1List = categoryService.getCategory1List();
+        return new Result(true,StatusCode.OK,"获取一级分类成功",category1List);
+    }
+
+    /**
+     * 获取二级分类及三级小分类
+     */
+    @GetMapping("/subCat/{id}")
+    public Result subCat(@PathVariable("id") Integer id) {
+        List<Category2Vo> category2VoList = categoryService.getSubCategory2List(id);
+        return new Result(true,StatusCode.OK,"获取二级分类及三级小分类成功",category2VoList);
     }
 }

@@ -2,6 +2,7 @@ package cn.coderap.goods.service.impl;
 
 import cn.coderap.goods.dao.CategoryMapper;
 import cn.coderap.goods.pojo.Category;
+import cn.coderap.goods.pojo.vo.Category2Vo;
 import cn.coderap.goods.service.CategoryService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -86,6 +87,20 @@ public class CategoryServiceImpl implements CategoryService {
         Example example = createExample(searchMap);
         return (Page<Category>)categoryMapper.selectByExample(example);
     }
+
+    @Override
+    public List<Category> getCategory1List() {
+        Example example=new Example(Category.class);
+        Example.Criteria criteria = example.createCriteria();
+        criteria.andEqualTo("parentId", 0);
+        return categoryMapper.selectByExample(example);
+    }
+
+    @Override
+    public List<Category2Vo> getSubCategory2List(Integer id) {
+        return categoryMapper.getSubCategory2List(id);
+    }
+
     private Example createExample(Map<String, Object> searchMap){
         Example example=new Example(Category.class);
         Example.Criteria criteria = example.createCriteria();

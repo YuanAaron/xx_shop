@@ -1,6 +1,7 @@
 package cn.coderap.goods.service;
 
 import cn.coderap.goods.pojo.Category;
+import cn.coderap.goods.pojo.vo.Category2Vo;
 import com.github.pagehelper.Page;
 
 import java.util.List;
@@ -20,4 +21,8 @@ public interface CategoryService {
     List<Category> findList(Map searchMap);
 
     Page<Category> findPage(Map searchMap, int page, int size);
+
+    List<Category> getCategory1List();
+
+    List<Category2Vo> getSubCategory2List(Integer id);
 }
