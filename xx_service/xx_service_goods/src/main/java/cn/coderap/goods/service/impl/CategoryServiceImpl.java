@@ -126,11 +126,31 @@ public class CategoryServiceImpl implements CategoryService {
     public Map<String, List<Category2Vo>> getSubCategory2Map() {
         String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
         if (StringUtils.isEmpty(cacheJson)) {
-            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapFromDB();
-            stringRedisTemplate.opsForValue().set(SUBCATJSON, JSON.toJSONString(subCategory2MapFromDB));
+            System.out.println("缓存未命中...可能需要查询数据库...");
+            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithLocalLock();
             return subCategory2MapFromDB;
         }
+        System.out.println("缓存命中...直接返回...");
         return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+    }
+
+    /**
+     * 本地锁只能锁住当前进程，分布式环境下，需要分布式锁
+     * @return
+     */
+    public Map<String, List<Category2Vo>> getSubCategory2MapWithLocalLock() {
+        // 加锁（categoryServiceImpl在容器中是单例的)
+        synchronized (this) {
+            // 1、获取锁后，再去缓存中确定一次，如果还没有才查数据库，即双重检验锁
+            String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
+            if (StringUtils.isEmpty(cacheJson)) {
+                // 2、查数据库
+                Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapFromDB();
+                System.out.println("查询了数据库...");
+                return subCategory2MapFromDB;
+            }
+            return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+        }
     }
 
     public Map<String, List<Category2Vo>> getSubCategory2MapFromDB() {
@@ -152,6 +172,7 @@ public class CategoryServiceImpl implements CategoryService {
             }
             map.put(String.valueOf(cat1.getId()),category2VoList);
         }
+        stringRedisTemplate.opsForValue().set(SUBCATJSON, JSON.toJSONString(map));
         return map;
     }
 
