@@ -122,6 +122,10 @@ public class CategoryController {
 
     /**
      * 获取二级分类及三级小分类(非懒加载）
+     *
+     * 1、哪些数据适合放入缓存？
+     *    1.1、即时性、数据一致性要求不高的；
+     *    1.2、访问量大但更新频率不高的数据（读多写少）；
      */
     @GetMapping("/subCat")
     public Result subCat() {

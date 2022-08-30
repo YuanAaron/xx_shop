@@ -5,9 +5,13 @@ import cn.coderap.goods.pojo.Category;
 import cn.coderap.goods.pojo.vo.Category2Vo;
 import cn.coderap.goods.pojo.vo.Category3Vo;
 import cn.coderap.goods.service.CategoryService;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import tk.mybatis.mapper.entity.Example;
@@ -22,6 +26,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Autowired
     private CategoryMapper categoryMapper;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    private static final String CAT1JSON = "cat1Json";
+    private static final String SUBCATJSON = "subCatJson";
 
     @Override
     public List<Category> findAllWithTree() {
@@ -92,6 +101,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<Category> getCategory1List() {
+        String cacheJson = stringRedisTemplate.opsForValue().get(CAT1JSON);
+        if (StringUtils.isEmpty(cacheJson)) {
+            List<Category> category1List = getCategory1ListFromDB();
+            stringRedisTemplate.opsForValue().set(CAT1JSON, JSON.toJSONString(category1List));
+            return category1List;
+        }
+        return JSON.parseObject(cacheJson, new TypeReference<List<Category>>(){});
+    }
+
+    public List<Category> getCategory1ListFromDB() {
         Example example=new Example(Category.class);
         Example.Criteria criteria = example.createCriteria();
         criteria.andEqualTo("parentId", 0);
@@ -105,6 +124,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Map<String, List<Category2Vo>> getSubCategory2Map() {
+        String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
+        if (StringUtils.isEmpty(cacheJson)) {
+            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapFromDB();
+            stringRedisTemplate.opsForValue().set(SUBCATJSON, JSON.toJSONString(subCategory2MapFromDB));
+            return subCategory2MapFromDB;
+        }
+        return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+    }
+
+    public Map<String, List<Category2Vo>> getSubCategory2MapFromDB() {
         List<Category> categories = categoryMapper.selectAll();
 
         List<Category> category1List = getByParentId(categories, 0);
