@@ -31,6 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private static final String CAT1JSON = "cat1Json";
     private static final String SUBCATJSON = "subCatJson";
+    private static final String REDISLOCK = "redisLock";
 
     @Override
     public List<Category> findAllWithTree() {
@@ -127,11 +128,48 @@ public class CategoryServiceImpl implements CategoryService {
         String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
         if (StringUtils.isEmpty(cacheJson)) {
             System.out.println("缓存未命中...可能需要查询数据库...");
-            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithLocalLock();
+            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithRedisLock();
             return subCategory2MapFromDB;
         }
         System.out.println("缓存命中...直接返回...");
         return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+    }
+
+    /**
+     * 分布式锁：所有服务（比如商品服务）都去同一个地方"占坑"，如果能占到，就执行逻辑，否则就必须等待，直到释放锁。
+     *    1、"占坑"可以去redis，也可以去数据库，即任何这些服务都能访问的地方；
+     *    2、等待可以采用自旋的方式
+     */
+    public Map<String, List<Category2Vo>> getSubCategory2MapWithRedisLock() {
+        // 尝试加锁
+        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(REDISLOCK, "exist");
+        if (flag) {
+            // 加锁成功
+            System.out.println("获取分布式锁成功...");
+            // 1、获取锁后，再去缓存中确定一次，如果还没有才查数据库，即双重检验锁
+            String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
+            if (StringUtils.isEmpty(cacheJson)) {
+                // 2、查数据库
+                Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapFromDB();
+                System.out.println("查询了数据库...");
+                // 释放锁
+                stringRedisTemplate.delete(REDISLOCK);
+                System.out.println("查询数据库后，分布式锁释放成功...");
+                return subCategory2MapFromDB;
+            }
+            stringRedisTemplate.delete(REDISLOCK);
+            System.out.println("分布式锁释放成功...");
+            return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+        } else {
+            // 加锁失败，休眠100ms后重试
+            System.out.println("获取分布式锁失败...等待重试");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            return getSubCategory2MapWithRedisLock();
+        }
     }
 
     /**

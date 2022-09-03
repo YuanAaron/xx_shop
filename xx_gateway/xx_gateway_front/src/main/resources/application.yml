@@ -17,6 +17,7 @@ spring:
               - PUT
               - DELETE
       routes:
+        # 路径匹配，对应的访问路径可以为：http://xxshop.cn/goods/category/subCat
         - id: goods
           uri: lb://goods
           predicates:
@@ -41,6 +42,12 @@ spring:
             - Path=/cart/**
           filters:
             - StripPrefix= 1
+
+        # 域名匹配，对应的访问路径可以为：http://xxshop.cn/category/subCat
+        - id: cart
+          uri: lb://goods
+          predicates:
+            - Host= xxshop.cn
 server:
   port: 7000
 eureka:
