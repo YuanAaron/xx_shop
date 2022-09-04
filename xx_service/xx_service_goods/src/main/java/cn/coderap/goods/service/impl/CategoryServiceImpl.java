@@ -10,6 +10,8 @@ import com.alibaba.fastjson.TypeReference;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.apache.commons.lang.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -27,6 +29,8 @@ public class CategoryServiceImpl implements CategoryService {
     private CategoryMapper categoryMapper;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private RedissonClient redissonClient;
 
     private static final String CAT1JSON = "cat1Json";
     private static final String SUBCATJSON = "subCatJson";
@@ -127,11 +131,33 @@ public class CategoryServiceImpl implements CategoryService {
         String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
         if (StringUtils.isEmpty(cacheJson)) {
             System.out.println("缓存未命中...可能需要查询数据库...");
-            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithRedisLock();
+            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithRedissonLock();
             return subCategory2MapFromDB;
         }
         System.out.println("缓存命中...直接返回...");
         return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+    }
+
+    public Map<String, List<Category2Vo>> getSubCategory2MapWithRedissonLock() {
+        RLock lock = redissonClient.getLock(REDISLOCK);
+        lock.lock(); //阻塞式等待
+        try {
+            // 加锁成功
+            System.out.println("获取分布式锁成功...");
+            // 1、获取锁后，再去缓存中确定一次，如果还没有才查数据库，即双重检验锁
+            String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
+            if (StringUtils.isEmpty(cacheJson)) {
+                Map<String, List<Category2Vo>> subCategory2MapFromDB;
+                // 2、查数据库
+                subCategory2MapFromDB = getSubCategory2MapFromDB();
+                System.out.println("查询了数据库...");
+                return subCategory2MapFromDB;
+            }
+            return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+        }finally {
+            lock.unlock();
+            System.out.println("分布式锁释放成功...");
+        }
     }
 
     /**
