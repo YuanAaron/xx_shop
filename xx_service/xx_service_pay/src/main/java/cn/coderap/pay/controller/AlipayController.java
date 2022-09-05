@@ -138,7 +138,7 @@ public class AlipayController {
         //生成二维码,将二维码写到输出流,返回到页面
 //            MatrixToImageWriter.writeToStream(bt, "jpg", httpResponse.getOutputStream());
         //将二维码写入到磁盘
-        File file = new File("/Users/oshacker/IdeaProjects/xx_shop/xx_service/xx_service_pay/src/main/resources/qrcodes", orderId + ".jpg");
+        File file = new File("/Users/user/IdeaProjects/xx_shop/xx_service/xx_service_pay/src/main/resources/qrcodes", orderId + ".jpg");
         MatrixToImageWriter.writeToFile(bt, "jpg", file);
     }
 

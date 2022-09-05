@@ -95,7 +95,7 @@ public class LogFilter implements GlobalFilter, Ordered {
     }
     @Async
     public void writeAccessLog(LogInfo logInfo){
-        File file = new File("/Users/oshacker/IdeaProjects/xx_shop/logs/gateway-log"+ File.separator+DateFormat.format(new Date())+".log");
+        File file = new File("/Users/user/IdeaProjects/xx_shop/logs/gateway-log"+ File.separator+DateFormat.format(new Date())+".log");
         if (!file.exists()){
             try {
                 if (file.createNewFile()){
