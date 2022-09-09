@@ -13,6 +13,9 @@ import org.apache.commons.lang.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Autowired
     private RedissonClient redissonClient;
 
-    private static final String CAT1JSON = "cat1Json";
     private static final String SUBCATJSON = "subCatJson";
     private static final String REDISLOCK = "redisLock";
 
@@ -80,6 +82,23 @@ public class CategoryServiceImpl implements CategoryService {
         categoryMapper.insertSelective(category);
     }
 
+    /**
+     * 1、@CacheEvict：失效模式
+     * 2、@Caching：同时进行多种缓存操作
+     * 3、@CacheEvict: 配置allEntries = true，同时可以删除多个缓存
+     *
+     * 4、@CachePut：双写模式，需要方法有返回值
+     * @param category
+     */
+    // 1
+//    @CacheEvict(value = "category", key = "'getCategory1List'")
+    // 2
+//    @Caching(evict = {
+//            @CacheEvict(value = "category", key = "'getCategory1List'"),
+//            @CacheEvict(value = "category", key = "'getSubCategory2Map'")
+//    })
+    // 3
+    @CacheEvict(value = "category", allEntries = true)
     @Override
     public void update(Category category) {
         categoryMapper.updateByPrimaryKeySelective(category);
@@ -103,15 +122,12 @@ public class CategoryServiceImpl implements CategoryService {
         return (Page<Category>)categoryMapper.selectByExample(example);
     }
 
+    @Cacheable(value = {"category"}, key = "#root.methodName", sync = true)
     @Override
     public List<Category> getCategory1List() {
-        String cacheJson = stringRedisTemplate.opsForValue().get(CAT1JSON);
-        if (StringUtils.isEmpty(cacheJson)) {
-            List<Category> category1List = getCategory1ListFromDB();
-            stringRedisTemplate.opsForValue().set(CAT1JSON, JSON.toJSONString(category1List));
-            return category1List;
-        }
-        return JSON.parseObject(cacheJson, new TypeReference<List<Category>>(){});
+        System.out.println("getCategory1List...");
+        List<Category> category1List = getCategory1ListFromDB();
+        return category1List;
     }
 
     public List<Category> getCategory1ListFromDB() {
@@ -126,17 +142,41 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryMapper.getSubCategory2List(id);
     }
 
+    @Cacheable(value = {"category"}, key = "#root.methodName")
     @Override
     public Map<String, List<Category2Vo>> getSubCategory2Map() {
-        String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
-        if (StringUtils.isEmpty(cacheJson)) {
-            System.out.println("缓存未命中...可能需要查询数据库...");
-            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithRedissonLock();
-            return subCategory2MapFromDB;
+        List<Category> categories = categoryMapper.selectAll();
+
+        List<Category> category1List = getByParentId(categories, 0);
+
+        Map<String, List<Category2Vo>> map = new HashMap<>();
+        for (Category cat1 : category1List) {
+            List<Category2Vo> category2VoList = new ArrayList<>();
+            List<Category> category2List = getByParentId(categories, cat1.getId());
+            for (Category cat2 : category2List) {
+                List<Category> category3List = getByParentId(categories, cat2.getId());
+                List<Category3Vo> category3VoList = new ArrayList<>();
+                for (Category cat3 : category3List) {
+                    category3VoList.add(new Category3Vo(cat3.getId(),cat3.getName(),cat3.getParentId()));
+                }
+                category2VoList.add(new Category2Vo(cat2.getId(),cat2.getName(),cat2.getParentId(),category3VoList));
+            }
+            map.put(String.valueOf(cat1.getId()),category2VoList);
         }
-        System.out.println("缓存命中...直接返回...");
-        return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+        return map;
     }
+
+//    @Override
+//    public Map<String, List<Category2Vo>> getSubCategory2Map() {
+//        String cacheJson = stringRedisTemplate.opsForValue().get(SUBCATJSON);
+//        if (StringUtils.isEmpty(cacheJson)) {
+//            System.out.println("缓存未命中...可能需要查询数据库...");
+//            Map<String, List<Category2Vo>> subCategory2MapFromDB = getSubCategory2MapWithRedissonLock();
+//            return subCategory2MapFromDB;
+//        }
+//        System.out.println("缓存命中...直接返回...");
+//        return JSON.parseObject(cacheJson, new TypeReference<Map<String, List<Category2Vo>>>(){});
+//    }
 
     /**
      * 当分类数据发生更新时，如何保证缓存和数据库中数据的一致性？
@@ -167,6 +207,36 @@ public class CategoryServiceImpl implements CategoryService {
      *  1、放入缓存的数据不应该是实时性、一致性要求高的，所以缓存数据时加上过期时间，保证每天拿到当前最新数据即可；
      *  2、对于经常修改、实时性、一致性要求高的数据，不要使用缓存，应该直接查数据库，即使慢点；
      *  3、我们应该合理选择，不应该过度设计、增加系统的复杂性。
+     *
+     *  使用Spring cache简化缓存开发
+     *  1、引入依赖：spring-boot-starter-cache、spring-boot-starter-data-redis
+     *  2、redis配置
+     *      2.1、在application.yml中手动配置：
+     *           spring.cache.type = redis
+     *           spring.cache.redis.time-to-live=300000 (默认为ms，如果不配置该项，那么缓存中的数据永远不过期)
+     *           #spring.cache.redis.key-prefix=CACHE_(默认使用缓存的名字（value属性设置的值）作为前缀，最好保持默认）
+     *           #spring.cache.redis.use-key-prefix=true(默认为true，最好保持默认，表示是否使用前缀）
+     *           #spring.cache.redis.cache-null-values=true（默认为true，最好保持默认，表示是否缓存空值，可以防止缓存穿透）
+     *  3、使用缓存：@EnableCaching 开启缓存功能（如果没有CacheConfig配置类，可以直接加在启动类上；如果有，可以加载配置类上）
+     *     3.1 @Cacheable：表示当前方法的结果需要缓存（如果缓存中有，方法不再调用，如果缓存中没有，会调用该方法，最后将方法的结果放入缓存）
+     *         3.1.1、value属性：表示缓存的分区，一般按照业务类型分；
+     *         3.1.2、key属性：如果不配置，key默认自动生成，但一般情况下，我们会指定缓存使用的key。但是需要使用SpEL表达式，参考：https://docs.spring.io/spring-framework/docs/5.2.22.RELEASE/spring-framework-reference/integration.html#cache-spel-context
+     *         3.1.3、如果不配置，默认使用JDK序列化机制，将序列化后的数据缓存到redis。但一般情况下，我们会指定将数据保存为json格式。具体配置为CacheConfig
+     *     3.2 @CacheEvict：将数据从缓存删除
+     *     3.3 @CachePut：不影响方法执行更新缓存
+     *     3.4 @Caching：组合以上多个缓存操作
+     *     3.5 @CacheConfig
+     *  4、Spring Cache的不足：
+     *     4.1 读模式
+     *         4.1.1、缓存穿透：大量并发请求同时查询一个不存在的数据。解决方案：缓存空数据。Spring Cache的解决方案是 spring.cache.redis.cache-null-values=true
+     *         4.1.2、缓存击穿：大量并发请求同时查询一个正好过期的数据。解决方案：加分布式锁。但Spring Cache默认没有加锁（调用RedisCache#lookup(Object key)方法），
+     *                可以给@Cacheable配置sync=true属性添加本地锁来实现（调用RedisCache#get(Object key, Callable<T> valueLoader)方法）)
+     *         4.1.3、缓存雪崩：大量的key同时过期。解决方案是：加随机时间。Spring Cache的解决方案是 spring.cache.redis.time-to-live=3600000
+     *     4.2 写模式（缓存与数据库一致性问题，Spring Cache没有做，解决方案请参考保证缓存和数据库中数据的一致性的 小结 和 注意 两部分）
+     *  5、Spring Cache小结
+     *     5.1、常规数据（读多写少，即时性、一小伙要求不高），读模式完全可以用Spring Cache；写模式只要缓存的数据设置了过期时间就足够了。
+     *     5.2、其他特殊数据，特殊设计
+     *
      * @return
      */
     public Map<String, List<Category2Vo>> getSubCategory2MapWithRedissonLock() {
